@@ -74,80 +74,40 @@ export class CreatePolicyComponent {
 }
 
 ---------
-import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
-import { InputText } from 'primeng/inputtext';
-import { Button } from 'primeng/button';
-import { Select } from 'primeng/select';
-import { ApiService } from '../../../core/services/api';
-import { AuthService } from '../../auth/auth.service';
+<div class="card-container" style="padding: 2rem; max-width: 600px; margin: 0 auto;">
+  <h2 style="color: #00915a; margin-bottom: 0.5rem;">Create New Policy</h2>
+  <p style="color: #666; margin-bottom: 2rem;">Define a new insurance plan for users.</p>
 
-@Component({
-  selector: 'app-create-policy',
-  standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, InputText, Button, Select],
-  templateUrl: './create-policy.html',
-  styleUrl: './create-policy.scss'
-})
-export class CreatePolicyComponent {
-  policyForm: FormGroup;
-  
-  planTypes = [
-    { label: 'Health Insurance', value: 'Health Insurance' },
-    { label: 'Life Insurance', value: 'Life Insurance' },
-    { label: 'Motor Insurance', value: 'Motor Insurance' },
-    { label: 'Property Insurance', value: 'Property Insurance' }
-  ];
+  <form [formGroup]="policyForm" (ngSubmit)="onCreate()" class="p-fluid" style="display: flex; flex-direction: column; gap: 1.5rem;">
+    
+    <div class="field">
+      <label style="font-weight: 600; display: block; margin-bottom: 0.5rem;">Plan Name</label>
+      <input pInputText formControlName="name" placeholder="e.g. Premium Health Shield" />
+      <small class="p-error" *ngIf="policyForm.get('name')?.invalid && policyForm.get('name')?.touched" style="color: red;">Plan name is required.</small>
+    </div>
 
-  constructor(
-    private fb: FormBuilder, 
-    private apiService: ApiService, 
-    private authService: AuthService,
-    private router: Router
-  ) {
-    // REMOVED policyId from the form group
-    this.policyForm = this.fb.group({
-      name: ['', Validators.required],
-      planType: ['', Validators.required],
-      premium: [null, [Validators.required, Validators.min(1)]],
-      coverage: [null, [Validators.required, Validators.min(1)]]
-    });
-  }
+    <div class="field">
+      <label style="font-weight: 600; display: block; margin-bottom: 0.5rem;">Plan Type</label>
+      <p-select formControlName="planType" [options]="planTypes" placeholder="Select Type" styleClass="w-full"></p-select>
+      <small class="p-error" *ngIf="policyForm.get('planType')?.invalid && policyForm.get('planType')?.touched" style="color: red;">Plan type is required.</small>
+    </div>
 
-  onCreate() {
-    if (this.policyForm.valid) {
-      const superUserId = this.authService.getUserId();
-      const formValues = this.policyForm.value;
+    <div class="field">
+      <label style="font-weight: 600; display: block; margin-bottom: 0.5rem;">Monthly Premium ($)</label>
+      <input pInputText type="number" formControlName="premium" placeholder="e.g. 150" />
+      <small class="p-error" *ngIf="policyForm.get('premium')?.invalid && policyForm.get('premium')?.touched" style="color: red;">Valid premium amount is required.</small>
+    </div>
 
-      // Construct the payload matching your Spring Boot 'Plan' entity
-      // We do NOT send policyId; the database will generate it.
-      const payload = {
-        planName: formValues.name,
-        planType: formValues.planType,
-        monthlyPremium: Number(formValues.premium), // Force number type
-        coverageLimit: Number(formValues.coverage)  // Force number type
-      };
+    <div class="field">
+      <label style="font-weight: 600; display: block; margin-bottom: 0.5rem;">Coverage Limit ($)</label>
+      <input pInputText type="number" formControlName="coverage" placeholder="e.g. 50000" />
+      <small class="p-error" *ngIf="policyForm.get('coverage')?.invalid && policyForm.get('coverage')?.touched" style="color: red;">Valid coverage amount is required.</small>
+    </div>
 
-      console.log('Sending Payload to /api/plans/create:', payload);
+    <p-button label="Publish Policy" type="submit" styleClass="p-button-success w-full" [disabled]="policyForm.invalid"></p-button>
 
-      this.apiService.createPolicy(payload, superUserId).subscribe({
-        next: (response) => {
-          alert('Policy successfully published to the database!');
-          this.policyForm.reset();
-          this.router.navigate(['/dashboard/super-policies']); 
-        },
-        error: (err) => {
-          console.error('Failed to create policy:', err);
-          alert('Failed to save policy. Check your Spring Boot console.');
-        }
-      });
-    } else {
-      this.policyForm.markAllAsTouched();
-    }
-  }
-}
+  </form>
+</div>
 
 
 
