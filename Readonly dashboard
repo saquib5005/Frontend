@@ -1,0 +1,142 @@
+// NEW: Fetch ALL policy data for Read-Only users
+  getReadOnlyPolicies(): Observable<any> {
+    // No userId header needed usually, but if your backend requires auth context, 
+    // you can pass the logged-in user's ID just like before.
+    return this.http.get(`${this.baseUrl}/policies/read-only`);
+  }
+-------
+
+ng generate component features/dashboard/read-only-dashboard
+----------
+
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { TableModule } from 'primeng/table';
+import { Tag } from 'primeng/tag';
+import { InputText } from 'primeng/inputtext'; // For search bar
+import { IconField } from 'primeng/iconfield';
+import { InputIcon } from 'primeng/inputicon';
+import { ApiService } from '../../../core/services/api';
+
+@Component({
+  selector: 'app-read-only-dashboard',
+  standalone: true,
+  imports: [CommonModule, TableModule, Tag, InputText, IconField, InputIcon],
+  template: `
+    <div style="padding: 2rem;">
+      <div style="background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+          <div>
+            <h2 style="margin: 0; color: #00915a;">Global Policy Audit</h2>
+            <p style="color: #666; margin-top: 0.5rem;">Read-only view of all user policies and metadata.</p>
+          </div>
+          
+          <p-iconfield iconPosition="left">
+              <p-inputicon styleClass="pi pi-search" />
+              <input type="text" pInputText placeholder="Search keywords..." 
+                     (input)="dt.filterGlobal($any($event.target).value, 'contains')" />
+          </p-iconfield>
+        </div>
+
+        <p-table #dt [value]="allPolicies" [paginator]="true" [rows]="10" 
+                 [globalFilterFields]="['policyId', 'planName', 'userName', 'status']"
+                 styleClass="p-datatable-striped">
+          
+          <ng-template pTemplate="header">
+            <tr>
+              <th pSortableColumn="policyId">ID <p-sortIcon field="policyId"></p-sortIcon></th>
+              <th pSortableColumn="planName">Plan Name <p-sortIcon field="planName"></p-sortIcon></th>
+              <th pSortableColumn="userName">User Name <p-sortIcon field="userName"></p-sortIcon></th>
+              <th pSortableColumn="startDate">Start Date <p-sortIcon field="startDate"></p-sortIcon></th>
+              <th pSortableColumn="premium">Premium <p-sortIcon field="premium"></p-sortIcon></th>
+              <th pSortableColumn="status">Status <p-sortIcon field="status"></p-sortIcon></th>
+            </tr>
+          </ng-template>
+
+          <ng-template pTemplate="body" let-policy>
+            <tr>
+              <td><span style="font-weight: bold; color: #666;">#{{ policy.policyId || policy.id }}</span></td>
+              
+              <td>
+                <div style="font-weight: 600;">{{ policy.planName || policy.name }}</div>
+                <div style="font-size: 0.85rem; color: #888;">{{ policy.planType || policy.type }}</div>
+              </td>
+              
+              <td>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <i class="pi pi-user" style="color: #00915a;"></i>
+                  <span>{{ policy.userName || policy.userFullName || 'Unknown User' }}</span>
+                </div>
+              </td>
+
+              <td>{{ policy.startDate | date:'mediumDate' }}</td>
+              
+              <td>{{ policy.premiumAmount || policy.monthlyPremium | currency:'USD' }}</td>
+
+              <td>
+                <p-tag 
+                  [value]="policy.status || 'ACTIVE'" 
+                  [severity]="getSeverity(policy.status)">
+                </p-tag>
+              </td>
+            </tr>
+          </ng-template>
+
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td colspan="6" style="text-align: center; padding: 3rem; color: #999;">
+                <i class="pi pi-folder-open" style="font-size: 2rem; display: block; margin-bottom: 0.5rem;"></i>
+                No policy records found in the system.
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    </div>
+  `
+})
+export class ReadOnlyDashboardComponent implements OnInit {
+  allPolicies: any[] = [];
+
+  constructor(private apiService: ApiService) {}
+
+  ngOnInit() {
+    this.apiService.getReadOnlyPolicies().subscribe({
+      next: (data) => {
+        console.log('Audit Data:', data);
+        this.allPolicies = data;
+      },
+      error: (err) => console.error('Failed to load audit data', err)
+    });
+  }
+
+  getSeverity(status: string): "success" | "info" | "warn" | "danger" | "secondary" | "contrast" | undefined {
+    switch (status?.toUpperCase()) {
+      case 'ACTIVE': return 'success';
+      case 'PENDING': return 'warn';
+      case 'EXPIRED': return 'danger';
+      case 'TERMINATED': return 'danger';
+      default: return 'info';
+    }
+
+--------
+
+children: [
+      // ... other routes ...
+      { 
+        path: 'read-only', 
+        loadComponent: () => import('./features/dashboard/read-only-dashboard/read-only-dashboard').then(m => m.ReadOnlyDashboardComponent) 
+      }
+    ]
+
+----
+
+} else if (role === 'Read-Only') {
+      this.menuItems = [
+        { label: 'Global Policy Audit', icon: 'pi pi-table', routerLink: ['/dashboard/read-only'] },
+        // Add other read-only links here if needed
+      ];
+    }
+  }
+}
