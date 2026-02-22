@@ -206,3 +206,50 @@ export class SuperPoliciesComponent implements OnInit {
     });
   }
 }
+-------------------
+
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { TableModule } from 'primeng/table';
+import { Tag } from 'primeng/tag';
+import { ApiService } from '../../../core/services/api';
+import { AuthService } from '../../auth/auth.service';
+
+@Component({
+  selector: 'app-super-policies',
+  standalone: true,
+  imports: [CommonModule, TableModule, Tag],
+  // Ensure this points to your HTML file if you are using one:
+  templateUrl: './super-policies.component.html', 
+  // OR keep the inline template if you prefer that structure
+  styleUrl: './super-policies.component.scss' 
+})
+export class SuperPoliciesComponent implements OnInit {
+  policies: any[] = [];
+
+  constructor(
+    private apiService: ApiService, 
+    private authService: AuthService,
+    private cdr: ChangeDetectorRef
+  ) {}
+
+  ngOnInit() {
+    this.loadPolicies();
+  }
+
+  loadPolicies() {
+    const superUserId = this.authService.getUserId();
+
+    // Fetch from the corrected endpoint
+    this.apiService.getSuperCreatedPolicies(superUserId).subscribe({
+      next: (data: any) => {
+        console.log('Final Policy Data for Table:', data); // Check this log!
+        this.policies = data;
+        this.cdr.detectChanges(); 
+      },
+      error: (err: any) => {
+        console.error('Failed to load plans:', err);
+      }
+    });
+  }
+}
