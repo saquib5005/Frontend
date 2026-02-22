@@ -1,0 +1,153 @@
+import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { InputText } from 'primeng/inputtext';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { ApiService } from '../../../core/services/api';
+import { AuthService } from '../../auth/auth.service';
+
+@Component({
+  selector: 'app-create-policy',
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule, InputText, Button, Select],
+  templateUrl: './create-policy.html',
+  styleUrl: './create-policy.scss'
+})
+export class CreatePolicyComponent {
+  policyForm: FormGroup;
+  
+  planTypes = [
+    { label: 'Health Insurance', value: 'Health Insurance' },
+    { label: 'Life Insurance', value: 'Life Insurance' },
+    { label: 'Motor Insurance', value: 'Motor Insurance' },
+    { label: 'Property Insurance', value: 'Property Insurance' }
+  ];
+
+  constructor(
+    private fb: FormBuilder, 
+    private apiService: ApiService, 
+    private authService: AuthService,
+    private router: Router
+  ) {
+    // REMOVED policyId from the form group
+    this.policyForm = this.fb.group({
+      name: ['', Validators.required],
+      planType: ['', Validators.required],
+      premium: [null, [Validators.required, Validators.min(1)]],
+      coverage: [null, [Validators.required, Validators.min(1)]]
+    });
+  }
+
+  onCreate() {
+    if (this.policyForm.valid) {
+      const superUserId = this.authService.getUserId();
+      const formValues = this.policyForm.value;
+
+      // Construct the payload matching your Spring Boot 'Plan' entity
+      // We do NOT send policyId; the database will generate it.
+      const payload = {
+        planName: formValues.name,
+        planType: formValues.planType,
+        monthlyPremium: Number(formValues.premium), // Force number type
+        coverageLimit: Number(formValues.coverage)  // Force number type
+      };
+
+      console.log('Sending Payload to /api/plans/create:', payload);
+
+      this.apiService.createPolicy(payload, superUserId).subscribe({
+        next: (response) => {
+          alert('Policy successfully published to the database!');
+          this.policyForm.reset();
+          this.router.navigate(['/dashboard/super-policies']); 
+        },
+        error: (err) => {
+          console.error('Failed to create policy:', err);
+          alert('Failed to save policy. Check your Spring Boot console.');
+        }
+      });
+    } else {
+      this.policyForm.markAllAsTouched();
+    }
+  }
+}
+
+---------
+import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { InputText } from 'primeng/inputtext';
+import { Button } from 'primeng/button';
+import { Select } from 'primeng/select';
+import { ApiService } from '../../../core/services/api';
+import { AuthService } from '../../auth/auth.service';
+
+@Component({
+  selector: 'app-create-policy',
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule, InputText, Button, Select],
+  templateUrl: './create-policy.html',
+  styleUrl: './create-policy.scss'
+})
+export class CreatePolicyComponent {
+  policyForm: FormGroup;
+  
+  planTypes = [
+    { label: 'Health Insurance', value: 'Health Insurance' },
+    { label: 'Life Insurance', value: 'Life Insurance' },
+    { label: 'Motor Insurance', value: 'Motor Insurance' },
+    { label: 'Property Insurance', value: 'Property Insurance' }
+  ];
+
+  constructor(
+    private fb: FormBuilder, 
+    private apiService: ApiService, 
+    private authService: AuthService,
+    private router: Router
+  ) {
+    // REMOVED policyId from the form group
+    this.policyForm = this.fb.group({
+      name: ['', Validators.required],
+      planType: ['', Validators.required],
+      premium: [null, [Validators.required, Validators.min(1)]],
+      coverage: [null, [Validators.required, Validators.min(1)]]
+    });
+  }
+
+  onCreate() {
+    if (this.policyForm.valid) {
+      const superUserId = this.authService.getUserId();
+      const formValues = this.policyForm.value;
+
+      // Construct the payload matching your Spring Boot 'Plan' entity
+      // We do NOT send policyId; the database will generate it.
+      const payload = {
+        planName: formValues.name,
+        planType: formValues.planType,
+        monthlyPremium: Number(formValues.premium), // Force number type
+        coverageLimit: Number(formValues.coverage)  // Force number type
+      };
+
+      console.log('Sending Payload to /api/plans/create:', payload);
+
+      this.apiService.createPolicy(payload, superUserId).subscribe({
+        next: (response) => {
+          alert('Policy successfully published to the database!');
+          this.policyForm.reset();
+          this.router.navigate(['/dashboard/super-policies']); 
+        },
+        error: (err) => {
+          console.error('Failed to create policy:', err);
+          alert('Failed to save policy. Check your Spring Boot console.');
+        }
+      });
+    } else {
+      this.policyForm.markAllAsTouched();
+    }
+  }
+}
+
+
+
