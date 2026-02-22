@@ -278,4 +278,84 @@ export class SuperPoliciesComponent implements OnInit {
     </td>
   </tr>
 </ng-template>
+-------
+
+// NEW: Delete a policy by ID
+  deletePolicy(planId: number | string, userId: string): Observable<any> {
+    const headers = new HttpHeaders().set('userId', userId);
+    
+    // Using responseType: 'text' in case your backend replies with a plain string like "Deleted successfully"
+    return this.http.delete(`${this.baseUrl}/plans/${planId}`, { headers: headers, responseType: 'text' });
+  }
+
+----------
+<p-table [value]="policies" styleClass="p-datatable-striped" [tableStyle]="{'min-width': '50rem'}">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>ID</th>
+            <th>Plan Name</th>
+            <th>Type</th>
+            <th>Monthly Premium</th>
+            <th>Coverage Limit</th>
+            <th>Action</th> 
+          </tr>
+        </ng-template>
+        
+        <ng-template pTemplate="body" let-policy>
+          <tr>
+            <td style="font-weight: bold;">{{ policy.planId || policy.policyId || policy.id }}</td>
+            <td>{{ policy.planName || policy.name }}</td>
+            <td>
+              <p-tag [value]="policy.planType || policy.type || policy.category" severity="info"></p-tag>
+            </td>
+            <td>{{ policy.premiumAmount || policy.monthlyPremium || policy.premium | currency:'USD' }}</td>
+            <td>{{ policy.coverageLimit || policy.coverage || policy.sumInsured | currency:'USD' }}</td>
+            
+            <td>
+              <p-button 
+                icon="pi pi-trash" 
+                label="Delete" 
+                severity="danger" 
+                size="small" 
+                (onClick)="onDelete(policy)">
+              </p-button>
+            </td>
+          </tr>
+        </ng-template>
+        
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 2rem;">No policies found. Go to 'Create Policy' to add one!</td>
+          </tr>
+        </ng-template>
+      </p-table>
+
+-------
+// NEW: Delete Confirmation and API Call
+  onDelete(policy: any) {
+    // Safely extract the exact ID regardless of what Spring Boot named it
+    const planId = policy.planId || policy.policyId || policy.id;
+    const planName = policy.planName || policy.name || 'this policy';
+
+    // Standard browser confirmation to prevent accidental clicks
+    if (confirm(`Are you sure you want to completely delete "${planName}"? This action cannot be undone.`)) {
+      
+      const superUserId = this.authService.getUserId();
+
+      this.apiService.deletePolicy(planId, superUserId).subscribe({
+        next: (response: any) => {
+          console.log('Delete Success:', response);
+          alert(`Policy "${planName}" was successfully deleted.`);
+          
+          // Refresh the table immediately to show the policy is gone
+          this.loadPolicies();
+        },
+        error: (err: any) => {
+          console.error('Failed to delete policy:', err);
+          alert('Failed to delete the policy. Check the console or your Spring Boot logs for errors.');
+        }
+      });
+    }
+  }
+
 
