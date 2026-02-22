@@ -253,3 +253,29 @@ export class SuperPoliciesComponent implements OnInit {
     });
   }
 }
+----------------
+
+<ng-template pTemplate="body" let-policy>
+  <tr>
+    <td style="font-weight: bold;">
+      {{ policy.policyId || policy.planId || policy.id }}
+    </td>
+
+    <td>
+      {{ policy.planName || policy.name }}
+    </td>
+
+    <td>
+      <p-tag [value]="policy.planType || policy.type || policy.category" severity="info"></p-tag>
+    </td>
+
+    <td>
+      {{ policy.monthlyPremium || policy.premium | currency:'USD' }}
+    </td>
+
+    <td>
+      {{ policy.coverageLimit || policy.coverage || policy.sumInsured | currency:'USD' }}
+    </td>
+  </tr>
+</ng-template>
+
