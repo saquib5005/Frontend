@@ -748,6 +748,139 @@ export class ApproverPoliciesComponent implements OnInit {
   }
 }
 
+=====================
+
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { TableModule } from 'primeng/table';
+import { ApiService } from '../../../core/services/api';
+
+@Component({
+  selector: 'app-approver-policies',
+  standalone: true,
+  imports: [CommonModule, TableModule],
+  template: `
+    <div style="background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+      <h2 style="margin-top: 0; color: #00915a;">User Policies</h2>
+      <p style="color: #666; margin-bottom: 2rem;">A complete, scrollable data grid of all user policy records.</p>
+
+      <p-table 
+        [value]="policies" 
+        [scrollable]="true" 
+        styleClass="p-datatable-gridlines p-datatable-striped p-datatable-sm" 
+        [tableStyle]="{'min-width': '160rem'}">
+        
+        <ng-template pTemplate="header">
+          <tr>
+            <th pFrozenColumn style="background: #f8f9fa; z-index: 1;">Policy ID</th>
+            <th>Plan ID</th>
+            <th>Plan Name</th>
+            <th>Holder Name</th>
+            <th>Holder DOB</th>
+            <th>Holder Address</th>
+            <th>Income Source</th>
+            <th>Total Income</th>
+            <th>Tenure (Yrs)</th>
+            <th>Premium Freq</th>
+            <th>Premium Amt</th>
+            <th>Insured Amt</th>
+            <th>Issuance Date</th>
+            <th>Maturity Date</th>
+            <th>Maturity Amt</th>
+            <th>Nominees Details</th>
+          </tr>
+        </ng-template>
+        
+        <ng-template pTemplate="body" let-policy>
+          <tr>
+            <td pFrozenColumn style="font-weight: bold; color: #555; background: #f8f9fa;">
+              #{{ policy.id }}
+            </td>
+            <td>{{ policy.planId }}</td>
+            <td style="font-weight: 600;">{{ policy.planName || 'N/A' }}</td>
+            <td>{{ policy.holderName }}</td>
+            <td>{{ policy.holderDob | date:'mediumDate' }}</td>
+            <td>{{ policy.holderAddress }}</td>
+            <td>{{ policy.incomeSource }}</td>
+            
+            <td>{{ policy.totalIncome | currency:'INR':'symbol':'1.0-2' }}</td>
+            
+            <td>{{ policy.tenureYears }}</td>
+            <td style="text-transform: capitalize;">{{ policy.premiumFrequency }}</td>
+            
+            <td style="color: #d32f2f; font-weight: 500;">
+              {{ policy.premiumAmount | currency:'INR':'symbol':'1.0-2' }}
+            </td>
+            
+            <td style="font-weight: 500;">
+              {{ policy.insuredAmount | currency:'INR':'symbol':'1.0-2' }}
+            </td>
+            
+            <td>{{ policy.issuanceDate | date:'mediumDate' }}</td>
+            <td>{{ policy.maturityDate | date:'mediumDate' }}</td>
+            
+            <td style="color: #00915a; font-weight: bold;">
+              {{ policy.maturityAmount | currency:'INR':'symbol':'1.0-2' }}
+            </td>
+            
+            <td style="min-width: 20rem;">
+              <div *ngFor="let nom of getNominees(policy.nomineesJson)" style="font-size: 0.85rem; margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px solid #eee;">
+                <strong>{{ nom.name }}</strong> ({{ nom.relationship }}) - {{ nom.percentageStake }}% stake
+                <div style="color: #888; font-size: 0.75rem;">DOB: {{ nom.dob | date:'shortDate' }} | Contact: {{ nom.contactNumber }}</div>
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="16" style="text-align: center; padding: 3rem; color: #777;">
+              No user policies found in the system.
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  `
+})
+export class ApproverPoliciesComponent implements OnInit {
+  policies: any[] = [];
+
+  constructor(
+    private apiService: ApiService, 
+    private cdr: ChangeDetectorRef 
+  ) {}
+
+  ngOnInit() {
+    this.apiService.getAllUserPolicies().subscribe({
+      next: (data) => {
+        console.log('Grid Data Fetched:', data);
+        this.policies = data;
+        this.cdr.detectChanges(); 
+      },
+      error: (err) => console.error('Failed to load policies:', err)
+    });
+  }
+
+  // Safely parses the stringified JSON array from the backend
+  getNominees(nomineesStr: string): any[] {
+    if (!nomineesStr) return [];
+    try {
+      let parsed = JSON.parse(nomineesStr);
+      
+      // Fixes the double array formatting shown in your JSON: "[[\"name\"...]]"
+      if (Array.isArray(parsed) && Array.isArray(parsed[0])) {
+        parsed = parsed[0];
+      }
+      
+      return Array.isArray(parsed) ? parsed : [parsed];
+    } catch (e) {
+      console.error('Error parsing nomineesJson:', e);
+      return [];
+    }
+  }
+}
+
 
 
 
