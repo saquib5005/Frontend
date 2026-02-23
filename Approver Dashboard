@@ -180,3 +180,203 @@ children: [
 
 ------------------
 
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { TableModule } from 'primeng/table';
+import { Tag } from 'primeng/tag';
+import { Button } from 'primeng/button';
+import { forkJoin } from 'rxjs'; // Import forkJoin for parallel API calls
+import { ApiService } from '../../../core/services/api';
+
+@Component({
+  selector: 'app-approver-policies',
+  standalone: true,
+  imports: [CommonModule, TableModule, Tag, Button],
+  template: `
+    <div style="background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+      <h2 style="margin-top: 0; color: #00915a;">User Policies (Approver View)</h2>
+      <p style="color: #666; margin-bottom: 2rem;">Review user applications with full plan details.</p>
+
+      <p-table [value]="policies" dataKey="id" styleClass="p-datatable-striped" [tableStyle]="{'min-width': '60rem'}">
+        
+        <ng-template pTemplate="header">
+          <tr>
+            <th style="width: 5rem"></th>
+            <th>Policy ID</th>
+            <th>Applicant</th>
+            <th>Plan Info</th>
+            <th>Premium</th>
+            <th>Issued Date</th>
+            <th>Status</th>
+          </tr>
+        </ng-template>
+        
+        <ng-template pTemplate="body" let-policy let-expanded="expanded">
+          <tr>
+            <td>
+              <p-button type="button" pRipple [pRowToggler]="policy" [text]="true" [rounded]="true" [plain]="true" [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'" />
+            </td>
+            <td style="font-weight: bold; color: #555;">#{{ policy.id }}</td>
+            
+            <td>
+              <div style="font-weight: 600;">{{ policy.user?.name || policy.holderName }}</div>
+              <div style="font-size: 0.85rem; color: #888;">{{ policy.user?.email }}</div>
+            </td>
+            
+            <td>
+              <div style="font-weight: 600; color: #00915a;">{{ policy.planName || 'Unknown Plan' }}</div>
+              <div style="font-size: 0.85rem; color: #888;">{{ policy.planType }}</div>
+            </td>
+            
+            <td>
+              <div style="color: #d32f2f; font-weight: 500;">{{ policy.premiumAmount | currency:'USD' }}</div>
+              <div style="font-size: 0.8rem; color: #888; text-transform: capitalize;">{{ policy.premiumFrequency }}</div>
+            </td>
+            
+            <td>{{ policy.issuanceDate | date:'mediumDate' }}</td>
+            
+            <td>
+              <p-tag [value]="policy.status || 'PENDING'" [severity]="getSeverity(policy.status)"></p-tag>
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="rowexpansion" let-policy>
+          <tr>
+            <td colspan="7">
+              <div style="padding: 1.5rem; background: #f8f9fa; border-radius: 8px; margin: 0.5rem 0;">
+                <h4 style="margin-top: 0; color: #00915a;">Verified Application Details</h4>
+                
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; margin-bottom: 2rem;">
+                  
+                  <div>
+                    <h5 style="margin-bottom: 0.5rem; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">Personal</h5>
+                    <div><strong>Holder:</strong> {{ policy.holderName }}</div>
+                    <div><strong>DOB:</strong> {{ policy.holderDob | date:'mediumDate' }}</div>
+                    <div><strong>Address:</strong> {{ policy.holderAddress }}</div>
+                  </div>
+
+                  <div>
+                    <h5 style="margin-bottom: 0.5rem; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">Financial</h5>
+                    <div><strong>Source:</strong> {{ policy.incomeSource }}</div>
+                    <div><strong>Annual Income:</strong> {{ policy.totalIncome | currency:'USD' }}</div>
+                    <div><strong>Coverage Limit:</strong> {{ policy.coverageLimit | currency:'USD' }}</div>
+                  </div>
+
+                  <div>
+                    <h5 style="margin-bottom: 0.5rem; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">Policy Meta</h5>
+                    <div><strong>Tenure:</strong> {{ policy.tenureYears }} Years</div>
+                    <div><strong>Insured Amt:</strong> {{ policy.insuredAmount | currency:'USD' }}</div>
+                    <div><strong>Maturity Amt:</strong> <span style="color: #00915a; font-weight: bold;">{{ policy.maturityAmount | currency:'USD' }}</span></div>
+                  </div>
+                </div>
+
+                <h5 style="margin-bottom: 0.5rem; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">Nominees</h5>
+                <p-table [value]="getNominees(policy.nomineesJson)" styleClass="p-datatable-sm" [tableStyle]="{'min-width': '30rem'}">
+                  <ng-template pTemplate="header">
+                    <tr>
+                      <th>Name</th>
+                      <th>Relationship</th>
+                      <th>DOB</th>
+                      <th>Contact</th>
+                      <th>Stake</th>
+                    </tr>
+                  </ng-template>
+                  <ng-template pTemplate="body" let-nominee>
+                    <tr>
+                      <td>{{ nominee.name }}</td>
+                      <td>{{ nominee.relationship }}</td>
+                      <td>{{ nominee.dob | date:'shortDate' }}</td>
+                      <td>{{ nominee.contactNumber }}</td>
+                      <td>{{ nominee.percentageStake }}%</td>
+                    </tr>
+                  </ng-template>
+                  <ng-template pTemplate="emptymessage">
+                    <tr><td colspan="5" style="text-align: center;">No nominee data found.</td></tr>
+                  </ng-template>
+                </p-table>
+
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  `
+})
+export class ApproverPoliciesComponent implements OnInit {
+  policies: any[] = [];
+
+  constructor(private apiService: ApiService) {}
+
+  ngOnInit() {
+    // 1. Fetch BOTH the User Policies AND the Master Plans List in parallel
+    forkJoin({
+      userPolicies: this.apiService.getAllUserPolicies(),
+      masterPlans: this.apiService.getAvailablePlans() // Reusing the endpoint we made for the dropdown
+    }).subscribe({
+      next: (response) => {
+        const { userPolicies, masterPlans } = response;
+        console.log('Raw User Policies:', userPolicies);
+        console.log('Master Plans List:', masterPlans);
+
+        // 2. Create a lookup map for faster matching: Map<PlanID, PlanObject>
+        // We handle ID mismatch (string vs number) by converting all to strings for the key
+        const planMap = new Map();
+        masterPlans.forEach((p: any) => {
+          const pId = String(p.planId || p.id || p.policyId);
+          planMap.set(pId, p);
+        });
+
+        // 3. Merge the data!
+        this.policies = userPolicies.map((policy: any) => {
+          // Find the matching master plan using the foreign key 'planId'
+          const foreignKey = String(policy.planId);
+          const matchedPlan = planMap.get(foreignKey);
+
+          if (matchedPlan) {
+            // Fill in the null blanks with the Master Plan data
+            return {
+              ...policy,
+              planName: policy.planName || matchedPlan.planName || matchedPlan.name,
+              planType: policy.planType || matchedPlan.planType || matchedPlan.type,
+              coverageLimit: policy.coverageLimit || matchedPlan.coverageLimit || matchedPlan.coverage
+            };
+          }
+          return policy; // Return as-is if no match found
+        });
+      },
+      error: (err) => console.error('Failed to load dashboard data:', err)
+    });
+  }
+
+  getNominees(nomineesStr: string): any[] {
+    if (!nomineesStr) return [];
+    try {
+      let parsed = JSON.parse(nomineesStr);
+      if (Array.isArray(parsed) && Array.isArray(parsed[0])) {
+        parsed = parsed[0];
+      }
+      return Array.isArray(parsed) ? parsed : [parsed];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  getSeverity(status: string): "success" | "info" | "warn" | "danger" | "secondary" | "contrast" | undefined {
+    switch (status?.toUpperCase()) {
+      case 'APPROVED': return 'success';
+      case 'PENDING': return 'warn';
+      case 'REJECTED': return 'danger';
+      default: return 'info';
+    }
+  }
+}
+
+
+
+
+
+
+
+
