@@ -368,5 +368,94 @@ if (role === 'User' || role === 'USER') {
 
 ---------
 
+calculateAndSubmit() {
+    const pGroup = this.issueForm.get('policy');
+    if (pGroup?.invalid) {
+      pGroup.markAllAsTouched();
+      alert('Please complete all policy details.');
+      return;
+    }
+
+    const rawData = this.issueForm.getRawValue();
+    const userId = Number(this.authService.getUserId());
+
+    // Helper function to safely convert JS Dates to "YYYY-MM-DD" for Spring Boot
+    const formatDate = (date: any) => {
+      if (!date) return null;
+      const d = new Date(date);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    // THE FIX: Construct payload EXACTLY matching your Backend JSON
+    const apiPayload = {
+      userId: userId,
+      planId: Number(rawData.policy.planId),
+      personalDetails: {
+        holderName: rawData.personal.holderName,
+        holderDob: formatDate(rawData.personal.holderDob),
+        holderAddress: rawData.personal.holderAddress
+      },
+      incomeDetails: {
+        incomeSource: rawData.income.incomeSource,
+        totalIncome: Number(rawData.income.totalIncome)
+      },
+      nomineeDetails: rawData.nominees.map((n: any) => ({
+        name: n.name,
+        contactNumber: n.contactNumber,
+        dob: formatDate(n.dob),
+        relationship: n.relationship,
+        percentageStake: Number(n.percentageStake)
+      })),
+      policyDetails: {
+        planName: rawData.policy.selectedPlan.planName || rawData.policy.selectedPlan.name,
+        planType: rawData.policy.planType,
+        coverageLimit: Number(rawData.policy.coverageLimit),
+        tenureYears: Number(rawData.policy.tenureYears),
+        premiumFrequency: rawData.policy.premiumFrequency.toLowerCase(), // e.g. "Quarterly" to "quarterly"
+        insuredAmount: Number(rawData.policy.insuredAmount),
+        issuanceDate: formatDate(rawData.policy.issuanceDate)
+      }
+    };
+
+    console.log('Strict Payload being sent to backend:', apiPayload);
+
+    // Local calculations just to display the Summary Screen correctly
+    const freq = rawData.policy.premiumFrequency;
+    let finalPremium = this.selectedPlanBasePremium;
+    if (freq === 'Quarterly') finalPremium = this.selectedPlanBasePremium * 3;
+    if (freq === 'Annually') finalPremium = this.selectedPlanBasePremium * 12;
+
+    const issueDate = new Date(rawData.policy.issuanceDate);
+    const maturityDate = new Date(issueDate);
+    maturityDate.setFullYear(maturityDate.getFullYear() + rawData.policy.tenureYears);
+    const maturityAmount = rawData.policy.insuredAmount + (rawData.policy.insuredAmount * 0.05 * rawData.policy.tenureYears);
+
+    // Fire the API call
+    this.apiService.issuePolicy(apiPayload, String(userId)).subscribe({
+      next: (response: any) => {
+        console.log('Backend Response:', response);
+        // Show the summary screen upon success
+        this.summaryData = {
+          holderName: rawData.personal.holderName,
+          planName: rawData.policy.selectedPlan.planName,
+          planType: rawData.policy.planType,
+          coverageLimit: rawData.policy.coverageLimit,
+          frequency: freq,
+          premiumAmount: finalPremium,
+          maturityDate: maturityDate,
+          maturityAmount: maturityAmount
+        };
+        this.showSummary = true;
+      },
+      error: (err) => {
+        console.error('Submission failed', err);
+        alert('Failed to issue policy. Check browser console.');
+      }
+    });
+  }
+
 
 
