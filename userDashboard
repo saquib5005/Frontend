@@ -597,3 +597,145 @@ children: [
 
 
 
+==================================
+
+// NEW: Fetch specific user's claims
+  getMyClaims(userId: string): Observable<any> {
+    const headers = new HttpHeaders().set('userId', userId);
+    return this.http.get(`${this.baseUrl}/claims/my`, { headers: headers });
+  }
+
+------------
+ng generate component features/dashboard/user-claims
+
+------
+
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { TableModule } from 'primeng/table';
+import { Tag } from 'primeng/tag';
+import { ApiService } from '../../../core/services/api';
+import { AuthService } from '../../auth/auth.service';
+
+@Component({
+  selector: 'app-user-claims',
+  standalone: true,
+  imports: [CommonModule, TableModule, Tag],
+  template: `
+    <div style="background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+      <h2 style="margin-top: 0; color: #00915a;">My Claims History</h2>
+      <p style="color: #666; margin-bottom: 2rem;">Track the status of your insurance claim applications.</p>
+
+      <p-table [value]="myClaims" styleClass="p-datatable-striped" [tableStyle]="{'min-width': '60rem'}">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Claim ID</th>
+            <th>Policy Name</th>
+            <th>Claim Date</th>
+            <th>Reason</th>
+            <th>Amount Claimed</th>
+            <th>Status</th>
+          </tr>
+        </ng-template>
+        
+        <ng-template pTemplate="body" let-claim>
+          <tr>
+            <td style="font-weight: bold; color: #555;">#{{ claim.id || claim.claimId }}</td>
+            
+            <td>
+              {{ claim.policyName || claim.policy?.planName || 'Unknown Policy' }}
+            </td>
+            
+            <td>{{ claim.claimDate || claim.dateOfClaim || claim.createdAt | date:'mediumDate' }}</td>
+            
+            <td>{{ claim.reason || claim.claimReason }}</td>
+
+            <td style="font-weight: bold; color: #d32f2f;">
+              {{ claim.amount || claim.claimAmount | currency:'USD' }}
+            </td>
+
+            <td>
+              <p-tag [value]="claim.status || 'PENDING'" [severity]="getSeverity(claim.status)"></p-tag>
+            </td>
+          </tr>
+        </ng-template>
+        
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 3rem; color: #999;">
+              <i class="pi pi-file" style="font-size: 2rem; display: block; margin-bottom: 0.5rem; color: #ccc;"></i>
+              No claims found.
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  `
+})
+export class UserClaimsComponent implements OnInit {
+  myClaims: any[] = [];
+
+  constructor(
+    private apiService: ApiService, 
+    private authService: AuthService,
+    private cdr: ChangeDetectorRef
+  ) {}
+
+  ngOnInit() {
+    this.loadMyClaims();
+  }
+
+  loadMyClaims() {
+    const userId = this.authService.getUserId();
+
+    this.apiService.getMyClaims(userId).subscribe({
+      next: (data: any) => {
+        console.log('Fetched My Claims:', data);
+        this.myClaims = data;
+        this.cdr.detectChanges(); 
+      },
+      error: (err: any) => {
+        console.error('Failed to load user claims:', err);
+      }
+    });
+  }
+
+  getSeverity(status: string): "success" | "info" | "warn" | "danger" | "secondary" | "contrast" | undefined {
+    switch (status?.toUpperCase()) {
+      case 'APPROVED': return 'success';
+      case 'PENDING': return 'warn';
+      case 'REJECTED': return 'danger';
+      default: return 'info';
+    }
+  }
+}
+
+-----------
+children: [
+      // ... existing routes ...
+      
+      // NEW: User Claims Route
+      { 
+        path: 'user-claims', 
+        loadComponent: () => import('./features/dashboard/user-claims/user-claims.component').then(m => m.UserClaimsComponent) 
+      }
+    ]
+-----------
+if (role === 'User' || role === 'USER') {
+      this.menuItems = [
+        { label: 'My Policies', icon: 'pi pi-list', routerLink: ['/dashboard/user-policies'] },
+        { label: 'Issue a Policy', icon: 'pi pi-file-edit', routerLink: ['/dashboard/issue-policy'] },
+        // NEW MENU ITEM ADDED HERE:
+        { label: 'My Claims', icon: 'pi pi-exclamation-circle', routerLink: ['/dashboard/user-claims'] }
+      ];
+    }
+----------
+
+
+
+
+
+
+
+
+
