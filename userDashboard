@@ -1,0 +1,381 @@
+// Fetch available plans for the Dropdown
+  getAvailablePlans(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/plans`);
+  }
+
+  // Submit the new issued policy
+  issuePolicy(policyData: any, userId: string): Observable<any> {
+    const headers = new HttpHeaders().set('userId', userId);
+    return this.http.post(`${this.baseUrl}/policies/issue`, policyData, { headers: headers, responseType: 'text' });
+  }
+----------
+
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ReactiveFormsModule, FormBuilder, FormGroup, FormArray, Validators } from '@angular/forms';
+import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
+import { DropdownModule } from 'primeng/dropdown';
+import { CalendarModule } from 'primeng/calendar';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { ApiService } from '../../../core/services/api';
+import { AuthService } from '../../auth/auth.service';
+
+@Component({
+  selector: 'app-issue-policy',
+  standalone: true,
+  imports: [
+    CommonModule, ReactiveFormsModule, ButtonModule, 
+    InputTextModule, DropdownModule, CalendarModule, InputNumberModule
+  ],
+  template: `
+    <div style="background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); max-width: 800px; margin: 0 auto;">
+      
+      <div *ngIf="!showSummary">
+        <h2 style="color: #00915a; margin-top: 0;">Issue a New Policy</h2>
+        
+        <div style="display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 2px solid #eee; padding-bottom: 1rem;">
+          <span [style.color]="currentStep === 1 ? '#00915a' : '#999'" style="font-weight: bold;">1. Personal</span> >
+          <span [style.color]="currentStep === 2 ? '#00915a' : '#999'" style="font-weight: bold;">2. Income</span> >
+          <span [style.color]="currentStep === 3 ? '#00915a' : '#999'" style="font-weight: bold;">3. Nominees</span> >
+          <span [style.color]="currentStep === 4 ? '#00915a' : '#999'" style="font-weight: bold;">4. Policy Details</span>
+        </div>
+
+        <form [formGroup]="issueForm" class="p-fluid">
+          
+          <div *ngIf="currentStep === 1" formGroupName="personal">
+            <div class="field" style="margin-bottom: 1.5rem;">
+              <label>Holder Name</label>
+              <input pInputText formControlName="holderName" placeholder="Full Name" />
+            </div>
+            <div class="field" style="margin-bottom: 1.5rem;">
+              <label>Date of Birth</label>
+              <p-calendar formControlName="holderDob" [showIcon]="true" placeholder="Select DOB"></p-calendar>
+            </div>
+            <div class="field" style="margin-bottom: 1.5rem;">
+              <label>Address</label>
+              <input pInputText formControlName="holderAddress" placeholder="Full Address" />
+            </div>
+          </div>
+
+          <div *ngIf="currentStep === 2" formGroupName="income">
+            <div class="field" style="margin-bottom: 1.5rem;">
+              <label>Income Source</label>
+              <input pInputText formControlName="incomeSource" placeholder="e.g., Salary, Business" />
+            </div>
+            <div class="field" style="margin-bottom: 1.5rem;">
+              <label>Total Annual Income ($)</label>
+              <p-inputNumber formControlName="totalIncome" mode="currency" currency="USD"></p-inputNumber>
+            </div>
+          </div>
+
+          <div *ngIf="currentStep === 3">
+            <div formArrayName="nominees">
+              <div *ngFor="let nom of nominees.controls; let i=index" [formGroupName]="i" style="padding: 1rem; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 1rem; position: relative;">
+                <h4 style="margin-top: 0; color: #555;">Nominee {{i + 1}}</h4>
+                
+                <p-button *ngIf="nominees.length > 1" icon="pi pi-times" severity="danger" [rounded]="true" [text]="true" 
+                          style="position: absolute; top: 0.5rem; right: 0.5rem;" (onClick)="removeNominee(i)"></p-button>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                  <div>
+                    <label>Name</label>
+                    <input pInputText formControlName="name" />
+                  </div>
+                  <div>
+                    <label>Contact Number</label>
+                    <input pInputText formControlName="contactNumber" />
+                  </div>
+                  <div>
+                    <label>Date of Birth</label>
+                    <p-calendar formControlName="dob" [showIcon]="true" appendTo="body"></p-calendar>
+                  </div>
+                  <div>
+                    <label>Relationship</label>
+                    <input pInputText formControlName="relationship" />
+                  </div>
+                  <div style="grid-column: span 2;">
+                    <label>Percentage Stake (%)</label>
+                    <p-inputNumber formControlName="percentageStake" suffix="%" [min]="1" [max]="100"></p-inputNumber>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p-button label="Add Another Nominee" icon="pi pi-plus" severity="secondary" size="small" (onClick)="addNominee()"></p-button>
+          </div>
+
+          <div *ngIf="currentStep === 4" formGroupName="policy">
+            <div class="field" style="margin-bottom: 1.5rem;">
+              <label>Select Plan</label>
+              <p-dropdown formControlName="selectedPlan" [options]="availablePlans" optionLabel="planName" placeholder="Choose a Plan" (onChange)="onPlanSelect($event)"></p-dropdown>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+              <div>
+                <label>Plan ID</label>
+                <input pInputText formControlName="planId" [readonly]="true" style="background: #f8f9fa;" />
+              </div>
+              <div>
+                <label>Plan Type</label>
+                <input pInputText formControlName="planType" [readonly]="true" style="background: #f8f9fa;" />
+              </div>
+              <div>
+                <label>Coverage Limit ($)</label>
+                <p-inputNumber formControlName="coverageLimit" [readonly]="true" inputId="minmaxfraction" mode="decimal" [minFractionDigits]="2" styleClass="w-full opacity-70"></p-inputNumber>
+              </div>
+              <div>
+                <label>Tenure (Years)</label>
+                <p-inputNumber formControlName="tenureYears" [min]="1" [max]="100"></p-inputNumber>
+              </div>
+              <div>
+                <label>Premium Frequency</label>
+                <p-dropdown formControlName="premiumFrequency" [options]="frequencies"></p-dropdown>
+              </div>
+              <div>
+                <label>Insured Amount ($)</label>
+                <p-inputNumber formControlName="insuredAmount" mode="currency" currency="USD"></p-inputNumber>
+              </div>
+            </div>
+
+            <div class="field" style="margin-bottom: 1.5rem;">
+              <label>Issuance Date</label>
+              <p-calendar formControlName="issuanceDate" [showIcon]="true"></p-calendar>
+            </div>
+          </div>
+
+        </form>
+
+        <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
+          <p-button label="Back" icon="pi pi-arrow-left" severity="secondary" (onClick)="prevStep()" *ngIf="currentStep > 1"></p-button>
+          <div style="flex-grow: 1;"></div>
+          <p-button label="Next" icon="pi pi-arrow-right" iconPos="right" (onClick)="nextStep()" *ngIf="currentStep < 4"></p-button>
+          <p-button label="Issue Policy" icon="pi pi-check" severity="success" (onClick)="calculateAndSubmit()" *ngIf="currentStep === 4"></p-button>
+        </div>
+      </div>
+
+      <div *ngIf="showSummary" style="text-align: center;">
+        <i class="pi pi-check-circle" style="font-size: 4rem; color: #00915a; margin-bottom: 1rem;"></i>
+        <h2 style="color: #00915a; margin-top: 0;">POLICY ISSUED</h2>
+        <p style="color: #666; margin-bottom: 2rem;">The policy has been successfully generated and saved.</p>
+        
+        <div style="background: #f8f9fa; padding: 2rem; border-radius: 8px; text-align: left; display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+          <div><strong>Holder Name:</strong> {{ summaryData.holderName }}</div>
+          <div><strong>Plan Name:</strong> {{ summaryData.planName }}</div>
+          <div><strong>Plan Type:</strong> {{ summaryData.planType }}</div>
+          <div><strong>Coverage Limit:</strong> {{ summaryData.coverageLimit | currency:'USD' }}</div>
+          <div><strong>Premium Amount:</strong> <span style="color: #d32f2f; font-weight: bold;">{{ summaryData.premiumAmount | currency:'USD' }} / {{ summaryData.frequency }}</span></div>
+          <div><strong>Maturity Date:</strong> {{ summaryData.maturityDate | date:'longDate' }}</div>
+          <div style="grid-column: span 2; font-size: 1.2rem; border-top: 1px solid #ddd; padding-top: 1rem; margin-top: 0.5rem;">
+            <strong>Estimated Maturity Amount:</strong> 
+            <span style="color: #00915a; font-weight: bold;">{{ summaryData.maturityAmount | currency:'USD' }}</span>
+          </div>
+        </div>
+
+        <p-button label="Issue Another Policy" icon="pi pi-refresh" styleClass="mt-4" (onClick)="resetForm()"></p-button>
+      </div>
+
+    </div>
+  `
+})
+export class IssuePolicyComponent implements OnInit {
+  issueForm: FormGroup;
+  currentStep = 1;
+  showSummary = false;
+  availablePlans: any[] = [];
+  frequencies = ['Monthly', 'Quarterly', 'Annually'];
+  
+  summaryData: any = {};
+  selectedPlanBasePremium = 0;
+
+  constructor(private fb: FormBuilder, private apiService: ApiService, private authService: AuthService) {
+    this.issueForm = this.fb.group({
+      personal: this.fb.group({
+        holderName: ['', Validators.required],
+        holderDob: [null, Validators.required],
+        holderAddress: ['', Validators.required]
+      }),
+      income: this.fb.group({
+        incomeSource: ['', Validators.required],
+        totalIncome: [null, [Validators.required, Validators.min(1)]]
+      }),
+      nominees: this.fb.array([this.createNominee()]),
+      policy: this.fb.group({
+        selectedPlan: [null, Validators.required],
+        planId: [{value: '', disabled: true}],
+        planType: [{value: '', disabled: true}],
+        coverageLimit: [{value: null, disabled: true}],
+        tenureYears: [null, [Validators.required, Validators.min(1)]],
+        premiumFrequency: ['Monthly', Validators.required],
+        insuredAmount: [null, [Validators.required, Validators.min(1)]],
+        issuanceDate: [null, Validators.required]
+      })
+    });
+  }
+
+  ngOnInit() {
+    this.apiService.getAvailablePlans().subscribe({
+      next: (plans) => this.availablePlans = plans,
+      error: (err) => console.error('Failed to load plans:', err)
+    });
+  }
+
+  // --- Form Array Getters & Setters ---
+  get nominees() {
+    return this.issueForm.get('nominees') as FormArray;
+  }
+
+  createNominee(): FormGroup {
+    return this.fb.group({
+      name: ['', Validators.required],
+      contactNumber: ['', Validators.required],
+      dob: [null, Validators.required],
+      relationship: ['', Validators.required],
+      percentageStake: [100, [Validators.required, Validators.min(1), Validators.max(100)]]
+    });
+  }
+
+  addNominee() {
+    this.nominees.push(this.createNominee());
+  }
+
+  removeNominee(index: number) {
+    if (this.nominees.length > 1) {
+      this.nominees.removeAt(index);
+    }
+  }
+
+  // --- Auto-fill logic when a plan is selected ---
+  onPlanSelect(event: any) {
+    const plan = event.value;
+    const pGroup = this.issueForm.get('policy');
+    if (plan && pGroup) {
+      pGroup.get('planId')?.setValue(plan.planId || plan.id);
+      pGroup.get('planType')?.setValue(plan.planType || plan.type);
+      pGroup.get('coverageLimit')?.setValue(plan.coverageLimit || plan.coverage);
+      this.selectedPlanBasePremium = plan.monthlyPremium || plan.premiumAmount || 0;
+    }
+  }
+
+  // --- Wizard Navigation ---
+  nextStep() {
+    // Validate current step before proceeding
+    let currentGroup: any;
+    if (this.currentStep === 1) currentGroup = this.issueForm.get('personal');
+    if (this.currentStep === 2) currentGroup = this.issueForm.get('income');
+    if (this.currentStep === 3) currentGroup = this.issueForm.get('nominees');
+
+    if (currentGroup?.invalid) {
+      currentGroup.markAllAsTouched();
+      alert('Please fill out all required fields correctly before proceeding.');
+      return;
+    }
+    
+    // Validate total stakeholder percentage = 100%
+    if (this.currentStep === 3) {
+      const totalStake = this.nominees.value.reduce((sum: number, n: any) => sum + (n.percentageStake || 0), 0);
+      if (totalStake !== 100) {
+        alert(`Total nominee stake must equal 100%. Currently it is ${totalStake}%.`);
+        return;
+      }
+    }
+
+    this.currentStep++;
+  }
+
+  prevStep() {
+    this.currentStep--;
+  }
+
+  // --- Final Calculation and Submit ---
+  calculateAndSubmit() {
+    const pGroup = this.issueForm.get('policy');
+    if (pGroup?.invalid) {
+      pGroup.markAllAsTouched();
+      alert('Please complete all policy details.');
+      return;
+    }
+
+    // Extract Data
+    const rawData = this.issueForm.getRawValue();
+    const policyData = rawData.policy;
+    const personalData = rawData.personal;
+
+    // Calculations
+    const freq = policyData.premiumFrequency;
+    let finalPremium = this.selectedPlanBasePremium;
+    if (freq === 'Quarterly') finalPremium = this.selectedPlanBasePremium * 3;
+    if (freq === 'Annually') finalPremium = this.selectedPlanBasePremium * 12;
+
+    const issueDate = new Date(policyData.issuanceDate);
+    const maturityDate = new Date(issueDate);
+    maturityDate.setFullYear(maturityDate.getFullYear() + policyData.tenureYears);
+
+    // Basic Maturity Logic: Insured Amount + (5% interest * years)
+    const maturityAmount = policyData.insuredAmount + (policyData.insuredAmount * 0.05 * policyData.tenureYears);
+
+    // Prepare API Payload
+    const apiPayload = {
+      ...rawData,
+      calculatedPremium: finalPremium,
+      calculatedMaturityDate: maturityDate,
+      calculatedMaturityAmount: maturityAmount
+    };
+
+    const userId = this.authService.getUserId();
+    
+    this.apiService.issuePolicy(apiPayload, userId).subscribe({
+      next: () => {
+        // Build Summary Data for UI
+        this.summaryData = {
+          holderName: personalData.holderName,
+          planName: policyData.selectedPlan.planName,
+          planType: policyData.planType,
+          coverageLimit: policyData.coverageLimit,
+          frequency: freq,
+          premiumAmount: finalPremium,
+          maturityDate: maturityDate,
+          maturityAmount: maturityAmount
+        };
+        this.showSummary = true;
+      },
+      error: (err) => {
+        console.error('Submission failed', err);
+        alert('Failed to issue policy. Check backend console.');
+      }
+    });
+  }
+
+  resetForm() {
+    this.issueForm.reset();
+    this.currentStep = 1;
+    this.showSummary = false;
+    // Reset nominee array to 1 element
+    while (this.nominees.length > 1) {
+      this.nominees.removeAt(1);
+    }
+  }
+}
+
+--------------
+
+children: [
+      // ... existing routes ...
+      { 
+        path: 'issue-policy', 
+        loadComponent: () => import('./features/dashboard/issue-policy/issue-policy.component').then(m => m.IssuePolicyComponent) 
+      }
+    ]
+
+---------
+if (role === 'User' || role === 'USER') {
+      this.menuItems = [
+        { label: 'My Policies', icon: 'pi pi-list', routerLink: ['/dashboard/user-policies'] },
+        // NEW MENU ITEM ADDED HERE:
+        { label: 'Issue a Policy', icon: 'pi pi-file-edit', routerLink: ['/dashboard/issue-policy'] }
+      ];
+    }
+
+---------
+
+
+
