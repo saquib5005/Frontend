@@ -1,0 +1,248 @@
+// --- APPROVER: CLAIMS MANAGEMENT ---
+
+  // 1. Fetch only pending claims
+  getPendingClaims(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/claims/pending`);
+  }
+
+  // 2. Fetch all claims (history)
+  getAllClaims(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/claims/retrieve`);
+  }
+
+  // 3. Approve a claim
+  approveClaim(claimId: number | string): Observable<any> {
+    return this.http.put(`${this.baseUrl}/claims/${claimId}/approve`, {}, { responseType: 'text' });
+  }
+
+  // 4. Reject a claim
+  rejectClaim(claimId: number | string): Observable<any> {
+    return this.http.put(`${this.baseUrl}/claims/${claimId}/reject`, {}, { responseType: 'text' });
+  }
+
+-------------------
+} else if (role === 'Approver' || role === 'APPROVER') {
+      this.menuItems = [
+        { label: 'User Policies', icon: 'pi pi-users', routerLink: ['/dashboard/approver-policies'] },
+        // NEW MENUS:
+        { label: 'Approve Claim', icon: 'pi pi-check-square', routerLink: ['/dashboard/approve-claim'] },
+        { label: 'All Claims', icon: 'pi pi-list', routerLink: ['/dashboard/all-claims'] }
+      ];
+    }
+
+------------
+ng generate component features/dashboard/approve-claim
+-----------
+
+
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { TableModule } from 'primeng/table';
+import { Tag } from 'primeng/tag';
+import { Button } from 'primeng/button';
+import { ApiService } from '../../../core/services/api';
+
+@Component({
+  selector: 'app-approve-claim',
+  standalone: true,
+  imports: [CommonModule, TableModule, Tag, Button],
+  template: `
+    <div style="background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+      <h2 style="margin-top: 0; color: #00915a;">Pending Claims</h2>
+      <p style="color: #666; margin-bottom: 2rem;">Review and process pending claim requests.</p>
+
+      <p-table [value]="pendingClaims" styleClass="p-datatable-striped" [tableStyle]="{'min-width': '60rem'}">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Claim ID</th>
+            <th>Policy ID</th>
+            <th>Claim Date</th>
+            <th>Reason</th>
+            <th>Amount (INR)</th>
+            <th>Status</th>
+            <th style="text-align: center;">Action</th>
+          </tr>
+        </ng-template>
+        
+        <ng-template pTemplate="body" let-claim>
+          <tr>
+            <td style="font-weight: bold; color: #555;">#{{ claim.id || claim.claimId }}</td>
+            <td>Policy #{{ claim.policyId || claim.policy?.id }}</td>
+            <td>{{ claim.claimDate || claim.createdAt | date:'mediumDate' }}</td>
+            <td>{{ claim.reason || claim.claimReason }}</td>
+            <td style="font-weight: bold; color: #d32f2f;">
+              {{ claim.amount || claim.claimAmount | currency:'INR':'symbol':'1.0-2' }}
+            </td>
+            <td>
+              <p-tag [value]="claim.status || 'PENDING'" severity="warn"></p-tag>
+            </td>
+            <td style="text-align: center; display: flex; gap: 0.5rem; justify-content: center;">
+              <p-button icon="pi pi-check" label="Approve" severity="success" size="small" (onClick)="onApprove(claim)"></p-button>
+              <p-button icon="pi pi-times" label="Reject" severity="danger" size="small" (onClick)="onReject(claim)"></p-button>
+            </td>
+          </tr>
+        </ng-template>
+        
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 3rem; color: #777;">
+              <i class="pi pi-check-circle" style="font-size: 2rem; display: block; margin-bottom: 0.5rem; color: #00915a;"></i>
+              All caught up! There are no pending claims to process.
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  `
+})
+export class ApproveClaimComponent implements OnInit {
+  pendingClaims: any[] = [];
+
+  constructor(private apiService: ApiService, private cdr: ChangeDetectorRef) {}
+
+  ngOnInit() {
+    this.loadPendingClaims();
+  }
+
+  loadPendingClaims() {
+    this.apiService.getPendingClaims().subscribe({
+      next: (data) => {
+        console.log('Pending Claims:', data);
+        this.pendingClaims = data;
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error('Failed to load pending claims:', err)
+    });
+  }
+
+  onApprove(claim: any) {
+    const claimId = claim.id || claim.claimId;
+    if (confirm(`Are you sure you want to APPROVE Claim #${claimId}?`)) {
+      this.apiService.approveClaim(claimId).subscribe({
+        next: () => {
+          alert(`Claim #${claimId} Approved Successfully!`);
+          this.loadPendingClaims(); // Refresh the list
+        },
+        error: (err) => {
+          console.error('Approval failed:', err);
+          alert('Failed to approve claim. Check console.');
+        }
+      });
+    }
+  }
+
+  onReject(claim: any) {
+    const claimId = claim.id || claim.claimId;
+    if (confirm(`Are you sure you want to REJECT Claim #${claimId}? This cannot be undone.`)) {
+      this.apiService.rejectClaim(claimId).subscribe({
+        next: () => {
+          alert(`Claim #${claimId} Rejected.`);
+          this.loadPendingClaims(); // Refresh the list
+        },
+        error: (err) => {
+          console.error('Rejection failed:', err);
+          alert('Failed to reject claim. Check console.');
+        }
+      });
+    }
+  }
+}
+
+--------------
+ng generate component features/dashboard/all-claims
+----------------
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { TableModule } from 'primeng/table';
+import { Tag } from 'primeng/tag';
+import { ApiService } from '../../../core/services/api';
+
+@Component({
+  selector: 'app-all-claims',
+  standalone: true,
+  imports: [CommonModule, TableModule, Tag],
+  template: `
+    <div style="background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+      <h2 style="margin-top: 0; color: #00915a;">All Claims Audit</h2>
+      <p style="color: #666; margin-bottom: 2rem;">A complete historical record of all claims.</p>
+
+      <p-table [value]="allClaims" [paginator]="true" [rows]="10" styleClass="p-datatable-striped" [tableStyle]="{'min-width': '60rem'}">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Claim ID</th>
+            <th>Policy ID</th>
+            <th>Claim Date</th>
+            <th>Reason</th>
+            <th>Amount (INR)</th>
+            <th>Status</th>
+          </tr>
+        </ng-template>
+        
+        <ng-template pTemplate="body" let-claim>
+          <tr>
+            <td style="font-weight: bold; color: #555;">#{{ claim.id || claim.claimId }}</td>
+            <td>Policy #{{ claim.policyId || claim.policy?.id }}</td>
+            <td>{{ claim.claimDate || claim.createdAt | date:'mediumDate' }}</td>
+            <td>{{ claim.reason || claim.claimReason }}</td>
+            <td style="font-weight: bold;">
+              {{ claim.amount || claim.claimAmount | currency:'INR':'symbol':'1.0-2' }}
+            </td>
+            <td>
+              <p-tag [value]="claim.status" [severity]="getSeverity(claim.status)"></p-tag>
+            </td>
+          </tr>
+        </ng-template>
+        
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 3rem; color: #777;">
+              No claims found in the database.
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  `
+})
+export class AllClaimsComponent implements OnInit {
+  allClaims: any[] = [];
+
+  constructor(private apiService: ApiService, private cdr: ChangeDetectorRef) {}
+
+  ngOnInit() {
+    this.apiService.getAllClaims().subscribe({
+      next: (data) => {
+        console.log('All Claims:', data);
+        this.allClaims = data;
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error('Failed to load all claims:', err)
+    });
+  }
+
+  getSeverity(status: string): "success" | "info" | "warn" | "danger" | "secondary" | "contrast" | undefined {
+    switch (status?.toUpperCase()) {
+      case 'APPROVED': return 'success';
+      case 'PENDING': return 'warn';
+      case 'REJECTED': return 'danger';
+      default: return 'info';
+    }
+  }
+}
+
+---------
+children: [
+      // ... your existing routes ...
+
+      // NEW: Approver Claims Routes
+      { 
+        path: 'approve-claim', 
+        loadComponent: () => import('./features/dashboard/approve-claim/approve-claim.component').then(m => m.ApproveClaimComponent) 
+      },
+      { 
+        path: 'all-claims', 
+        loadComponent: () => import('./features/dashboard/all-claims/all-claims.component').then(m => m.AllClaimsComponent) 
+      }
+    ]
+
+
