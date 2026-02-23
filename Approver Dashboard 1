@@ -245,4 +245,108 @@ children: [
       }
     ]
 
+-------------
+
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { TableModule } from 'primeng/table';
+import { Tag } from 'primeng/tag';
+import { ApiService } from '../../../core/services/api';
+
+@Component({
+  selector: 'app-all-claims',
+  standalone: true,
+  imports: [CommonModule, TableModule, Tag],
+  template: `
+    <div style="background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+      <h2 style="margin-top: 0; color: #00915a;">All Claims</h2>
+      <p style="color: #666; margin-bottom: 2rem;">Overview of all user claims submitted across the platform.</p>
+
+      <p-table [value]="claims" [paginator]="true" [rows]="10" styleClass="p-datatable-striped" [tableStyle]="{'min-width': '65rem'}">
+        
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Claim ID</th>
+            <th>Policy ID</th>
+            <th>Plan Info</th>
+            <th>Claim Type</th>
+            <th>Claim Amount</th>
+            <th>Date</th>
+            <th>Status</th>
+            <th>Remarks</th>
+          </tr>
+        </ng-template>
+        
+        <ng-template pTemplate="body" let-claim>
+          <tr>
+            <td style="font-weight: bold; color: #555;">#{{ claim.claimId || claim.id }}</td>
+            
+            <td style="font-weight: bold;">#{{ claim.policyId }}</td>
+            
+            <td>
+              <div style="font-weight: 600;">{{ claim.planName || 'N/A' }}</div>
+              <div style="font-size: 0.85rem; color: #888;">Insured: {{ claim.insuredAmount | currency:'USD' }}</div>
+            </td>
+            
+            <td>{{ claim.claimType }}</td>
+            
+            <td style="color: #d32f2f; font-weight: bold;">
+              {{ claim.claimAmount | currency:'USD' }}
+            </td>
+            
+            <td>{{ claim.claimDate | date:'mediumDate' }}</td>
+            
+            <td>
+              <p-tag [value]="claim.status || 'PENDING'" [severity]="getSeverity(claim.status)"></p-tag>
+            </td>
+
+            <td style="max-width: 200px; white-space: normal; word-wrap: break-word; font-size: 0.9rem; color: #666;">
+              {{ claim.remarks || 'No remarks provided.' }}
+            </td>
+          </tr>
+        </ng-template>
+        
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="8" style="text-align: center; padding: 3rem; color: #999;">
+              <i class="pi pi-folder-open" style="font-size: 2rem; display: block; margin-bottom: 0.5rem; color: #ccc;"></i>
+              No claims found in the database.
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  `
+})
+export class AllClaimsComponent implements OnInit {
+  claims: any[] = [];
+
+  constructor(
+    private apiService: ApiService,
+    private cdr: ChangeDetectorRef 
+  ) {}
+
+  ngOnInit() {
+    this.apiService.getAllClaims().subscribe({
+      next: (data: any) => {
+        console.log('Fetched All Claims:', data);
+        this.claims = data;
+        this.cdr.detectChanges(); // Prevents the NG0100 error
+      },
+      error: (err: any) => {
+        console.error('Failed to load all claims:', err);
+      }
+    });
+  }
+
+  getSeverity(status: string): "success" | "info" | "warn" | "danger" | "secondary" | "contrast" | undefined {
+    switch (status?.toUpperCase()) {
+      case 'APPROVED': return 'success';
+      case 'PENDING': return 'warn';
+      case 'REJECTED': return 'danger';
+      default: return 'info';
+    }
+  }
+}
+
 
