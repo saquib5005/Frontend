@@ -456,6 +456,144 @@ calculateAndSubmit() {
       }
     });
   }
+===========================================================
+// NEW: Fetch specific user's issued policies
+  getMyPolicies(userId: string): Observable<any> {
+    // Passes the exact header you tested in Postman
+    const headers = new HttpHeaders().set('userId', userId);
+    return this.http.get(`${this.baseUrl}/policies/my-policies`, { headers: headers });
+  }
+
+---------
+
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { TableModule } from 'primeng/table';
+import { Tag } from 'primeng/tag';
+import { ApiService } from '../../../core/services/api';
+import { AuthService } from '../../auth/auth.service';
+
+@Component({
+  selector: 'app-user-policies',
+  standalone: true,
+  imports: [CommonModule, TableModule, Tag],
+  template: `
+    <div style="background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+      <h2 style="margin-top: 0; color: #00915a;">My Policies</h2>
+      <p style="color: #666; margin-bottom: 2rem;">A complete list of your active and past insurance policies.</p>
+
+      <p-table [value]="myPolicies" styleClass="p-datatable-striped" [tableStyle]="{'min-width': '60rem'}">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Policy ID</th>
+            <th>Plan Name</th>
+            <th>Holder</th>
+            <th>Premium</th>
+            <th>Insured Amount</th>
+            <th>Maturity Date</th>
+            <th>Status</th>
+          </tr>
+        </ng-template>
+        
+        <ng-template pTemplate="body" let-policy>
+          <tr>
+            <td style="font-weight: bold; color: #555;">#{{ policy.id || policy.policyId }}</td>
+            
+            <td>
+              <div style="font-weight: 600;">{{ policy.planName }}</div>
+              <div style="font-size: 0.85rem; color: #888;">{{ policy.planType }}</div>
+            </td>
+            
+            <td>{{ policy.holderName }}</td>
+            
+            <td>
+              <div style="color: #d32f2f; font-weight: 500;">
+                {{ policy.premiumAmount | currency:'USD' }}
+              </div>
+              <div style="font-size: 0.8rem; color: #888; text-transform: capitalize;">
+                {{ policy.premiumFrequency }}
+              </div>
+            </td>
+
+            <td style="font-weight: bold; color: #00915a;">
+              {{ policy.insuredAmount | currency:'USD' }}
+            </td>
+
+            <td>{{ policy.maturityDate | date:'mediumDate' }}</td>
+
+            <td>
+              <p-tag [value]="policy.status || 'ACTIVE'" [severity]="getSeverity(policy.status)"></p-tag>
+            </td>
+          </tr>
+        </ng-template>
+        
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 3rem; color: #999;">
+              <i class="pi pi-shield" style="font-size: 2rem; display: block; margin-bottom: 0.5rem; color: #ccc;"></i>
+              You have not issued any policies yet. Go to 'Issue a Policy' to get started!
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  `
+})
+export class UserPoliciesComponent implements OnInit {
+  myPolicies: any[] = [];
+
+  constructor(
+    private apiService: ApiService, 
+    private authService: AuthService,
+    private cdr: ChangeDetectorRef
+  ) {}
+
+  ngOnInit() {
+    this.loadMyPolicies();
+  }
+
+  loadMyPolicies() {
+    const userId = this.authService.getUserId();
+
+    this.apiService.getMyPolicies(userId).subscribe({
+      next: (data: any) => {
+        console.log('Fetched My Policies:', data);
+        this.myPolicies = data;
+        this.cdr.detectChanges(); 
+      },
+      error: (err: any) => {
+        console.error('Failed to load user policies:', err);
+      }
+    });
+  }
+
+  getSeverity(status: string): "success" | "info" | "warn" | "danger" | "secondary" | "contrast" | undefined {
+    switch (status?.toUpperCase()) {
+      case 'ACTIVE': return 'success';
+      case 'PENDING': return 'warn';
+      case 'EXPIRED': return 'danger';
+      case 'CANCELED': return 'danger';
+      default: return 'success'; // Fallback for active
+    }
+  }
+}
+
+-------------------------
+
+children: [
+      // ... your other routes ...
+      
+      // Add the User Policies route
+      { 
+        path: 'user-policies', 
+        loadComponent: () => import('./features/dashboard/user-policies/user-policies.component').then(m => m.UserPoliciesComponent) 
+      }
+    ]
+
+--------------------
+
+
+
 
 
 
