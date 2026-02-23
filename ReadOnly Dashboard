@@ -2,149 +2,100 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { Tag } from 'primeng/tag';
-import { InputTextModule } from 'primeng/inputtext';
-import { ButtonModule } from 'primeng/button';
 import { ApiService } from '../../../core/services/api';
 
 @Component({
   selector: 'app-read-only-dashboard',
   standalone: true,
-  imports: [CommonModule, TableModule, Tag, InputTextModule, ButtonModule],
+  imports: [CommonModule, TableModule, Tag],
   template: `
     <div style="padding: 2rem;">
       <div style="background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
         
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-          <div>
-            <h2 style="margin: 0; color: #00915a;">Global Policy Audit</h2>
-            <p style="color: #666; margin-top: 0.5rem;">Read-only view of all policies and comprehensive metadata.</p>
-          </div>
+        <div style="margin-bottom: 2rem;">
+          <h2 style="margin: 0; color: #00915a;">Global Policy Audit (Grid View)</h2>
+          <p style="color: #666; margin-top: 0.5rem;">Comprehensive read-only spreadsheet view of all metadata.</p>
         </div>
 
-        <p-table #dt [value]="allPolicies" dataKey="id" [paginator]="true" [rows]="10" 
+        <p-table #dt [value]="allPolicies" dataKey="id" [paginator]="true" [rows]="15" 
+                 [scrollable]="true" scrollHeight="600px"
                  [globalFilterFields]="['id', 'user.username', 'holderName']"
-                 styleClass="p-datatable-striped" [tableStyle]="{'min-width': '50rem'}">
+                 styleClass="p-datatable-striped p-datatable-gridlines p-datatable-sm" 
+                 [tableStyle]="{'min-width': '200rem'}">
           
           <ng-template pTemplate="header">
             <tr>
-              <th style="width: 5rem"></th> <th pSortableColumn="id">Policy ID <p-sortIcon field="id"></p-sortIcon></th>
-              <th pSortableColumn="holderName">Holder Name <p-sortIcon field="holderName"></p-sortIcon></th>
-              <th pSortableColumn="user.username">System Account <p-sortIcon field="user.username"></p-sortIcon></th>
-              <th pSortableColumn="issuanceDate">Issuance Date <p-sortIcon field="issuanceDate"></p-sortIcon></th>
-              <th>Status</th>
+              <th pFrozenColumn style="width: 5rem; background: #f8f9fa;">ID</th>
+              <th pFrozenColumn style="width: 12rem; background: #f8f9fa;">Holder Name</th>
+              
+              <th>Username</th>
+              <th>Email</th>
+              <th>System Role</th>
+              <th>Account Active</th>
+              <th>Acct Created</th>
+              
+              <th>DOB</th>
+              <th>Address</th>
+              <th>Income Source</th>
+              <th>Total Income</th>
+              
+              <th>Plan ID</th>
+              <th>Plan Name</th>
+              <th>Plan Type</th>
+              <th>Coverage Limit</th>
+              <th>Tenure</th>
+              <th>Premium Freq</th>
+              <th>Premium Amt</th>
+              <th>Insured Amt</th>
+              <th>Issuance Date</th>
+              <th>Maturity Date</th>
+              <th>Maturity Amt</th>
+              
+              <th>Nominees (Name & Stake)</th>
+              
+              <th pFrozenColumn alignFrozen="right" style="background: #f8f9fa;">Status</th>
             </tr>
           </ng-template>
 
-          <ng-template pTemplate="body" let-policy let-expanded="expanded">
+          <ng-template pTemplate="body" let-policy>
             <tr>
-              <td>
-                <p-button type="button" pRipple [pRowToggler]="policy" [text]="true" [rounded]="true" [plain]="true" [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'" />
-              </td>
-              <td><span style="font-weight: bold; color: #666;">#{{ policy.id }}</span></td>
-              <td>
-                <div style="font-weight: 600;">{{ policy.holderName }}</div>
-              </td>
-              <td>
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                  <i class="pi pi-user" style="color: #00915a;"></i>
-                  <span>{{ policy.user?.username || 'N/A' }}</span>
-                </div>
-              </td>
+              <td pFrozenColumn style="font-weight: bold; background: #fff;">#{{ policy.id }}</td>
+              <td pFrozenColumn style="font-weight: bold; background: #fff;">{{ policy.holderName }}</td>
+              
+              <td>{{ policy.user?.username || 'N/A' }}</td>
+              <td>{{ policy.user?.email || 'N/A' }}</td>
+              <td><p-tag [value]="policy.user?.role || 'N/A'" severity="secondary"></p-tag></td>
+              <td>{{ policy.user?.active ? 'Yes' : 'No' }}</td>
+              <td>{{ policy.user?.createdAt | date:'shortDate' }}</td>
+              
+              <td>{{ policy.holderDob | date:'mediumDate' }}</td>
+              <td>{{ policy.holderAddress }}</td>
+              <td>{{ policy.incomeSource }}</td>
+              <td>{{ policy.totalIncome | currency:'USD' }}</td>
+              
+              <td>{{ policy.planId }}</td>
+              <td>{{ policy.planName || 'N/A' }}</td>
+              <td>{{ policy.planType || 'N/A' }}</td>
+              <td>{{ policy.coverageLimit ? (policy.coverageLimit | currency:'USD') : 'N/A' }}</td>
+              <td>{{ policy.tenureYears || policy.tenuzeYears }} Yrs</td>
+              <td style="text-transform: capitalize;">{{ policy.premiumFrequency }}</td>
+              <td style="color: #d32f2f;">{{ policy.premiumAmount | currency:'USD' }}</td>
+              <td style="font-weight: bold; color: #00915a;">{{ policy.insuredAmount || policy.InsuredAmount | currency:'USD' }}</td>
               <td>{{ policy.issuanceDate | date:'mediumDate' }}</td>
-              <td>
+              <td>{{ policy.maturityDate | date:'mediumDate' }}</td>
+              <td style="color: #00915a; font-weight: bold;">{{ policy.maturityAmount | currency:'USD' }}</td>
+              
+              <td>{{ formatNominees(policy.nomineesJson) }}</td>
+              
+              <td pFrozenColumn alignFrozen="right" style="background: #fff;">
                 <p-tag [value]="policy.status || 'ACTIVE'" [severity]="getSeverity(policy.status)"></p-tag>
-              </td>
-            </tr>
-          </ng-template>
-
-          <ng-template pTemplate="rowexpansion" let-policy>
-            <tr>
-              <td colspan="6" style="padding: 0;">
-                <div style="padding: 2rem; background: #f8f9fa; border-top: 2px solid #00915a;">
-                  <h4 style="margin-top: 0; color: #333; margin-bottom: 1.5rem;">Complete Metadata Record</h4>
-                  
-                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start;">
-                    
-                    <table class="vertical-table">
-                      <thead>
-                        <tr><th colspan="2" class="table-title">User & Account Metadata</th></tr>
-                      </thead>
-                      <tbody>
-                        <tr><th>User ID</th><td>{{ policy.user?.id }}</td></tr>
-                        <tr><th>Username</th><td>{{ policy.user?.username }}</td></tr>
-                        <tr><th>Email</th><td>{{ policy.user?.email }}</td></tr>
-                        <tr><th>Role</th><td><p-tag [value]="policy.user?.role" severity="secondary"></p-tag></td></tr>
-                        <tr><th>Account Active</th><td>{{ policy.user?.active ? 'True' : 'False' }}</td></tr>
-                        <tr><th>Account Created</th><td>{{ policy.user?.createdAt | date:'medium' }}</td></tr>
-                      </tbody>
-
-                      <thead style="margin-top: 1rem; display: table-row-group;">
-                        <tr><th colspan="2" class="table-title">Personal Details</th></tr>
-                      </thead>
-                      <tbody>
-                        <tr><th>Holder Name</th><td>{{ policy.holderName }}</td></tr>
-                        <tr><th>Date of Birth</th><td>{{ policy.holderDob | date:'longDate' }}</td></tr>
-                        <tr><th>Address</th><td>{{ policy.holderAddress }}</td></tr>
-                        <tr><th>Income Source</th><td>{{ policy.incomeSource }}</td></tr>
-                        <tr><th>Total Income</th><td>{{ policy.totalIncome | currency:'USD' }}</td></tr>
-                      </tbody>
-                    </table>
-
-                    <table class="vertical-table">
-                      <thead>
-                        <tr><th colspan="2" class="table-title">Policy Metadata</th></tr>
-                      </thead>
-                      <tbody>
-                        <tr><th>Plan ID</th><td>{{ policy.planId }}</td></tr>
-                        <tr><th>Plan Name</th><td>{{ policy.planName || 'N/A' }}</td></tr>
-                        <tr><th>Plan Type</th><td>{{ policy.planType || 'N/A' }}</td></tr>
-                        <tr><th>Coverage Limit</th><td>{{ policy.coverageLimit ? (policy.coverageLimit | currency:'USD') : 'N/A' }}</td></tr>
-                        <tr><th>Tenure</th><td>{{ policy.tenureYears || policy.tenuzeYears }} Years</td></tr>
-                        <tr><th>Premium Freq</th><td style="text-transform: capitalize;">{{ policy.premiumFrequency }}</td></tr>
-                        <tr><th>Premium Amt</th><td>{{ policy.premiumAmount | currency:'USD' }}</td></tr>
-                        <tr><th>Insured Amt</th><td style="font-weight: bold;">{{ policy.insuredAmount || policy.InsuredAmount | currency:'USD' }}</td></tr>
-                        <tr><th>Maturity Date</th><td>{{ policy.maturityDate | date:'longDate' }}</td></tr>
-                        <tr><th>Maturity Amt</th><td style="color: #00915a; font-weight: bold;">{{ policy.maturityAmount | currency:'USD' }}</td></tr>
-                      </tbody>
-                    </table>
-
-                  </div>
-
-                  <div style="margin-top: 2rem;">
-                    <h5 style="margin-bottom: 0.5rem; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 0.5rem;">Nominees Database</h5>
-                    <p-table [value]="getNominees(policy.nomineesJson)" styleClass="p-datatable-sm" [tableStyle]="{'min-width': '40rem'}">
-                      <ng-template pTemplate="header">
-                        <tr>
-                          <th>Name</th>
-                          <th>Relationship</th>
-                          <th>DOB</th>
-                          <th>Contact</th>
-                          <th>Stake</th>
-                        </tr>
-                      </ng-template>
-                      <ng-template pTemplate="body" let-nominee>
-                        <tr>
-                          <td>{{ nominee.name }}</td>
-                          <td>{{ nominee.relationship }}</td>
-                          <td>{{ nominee.dob | date:'mediumDate' }}</td>
-                          <td>{{ nominee.contactNumber }}</td>
-                          <td style="font-weight: bold;">{{ nominee.percentageStake }}%</td>
-                        </tr>
-                      </ng-template>
-                      <ng-template pTemplate="emptymessage">
-                        <tr><td colspan="5" style="text-align: center;">No nominee data available.</td></tr>
-                      </ng-template>
-                    </p-table>
-                  </div>
-
-                </div>
               </td>
             </tr>
           </ng-template>
 
           <ng-template pTemplate="emptymessage">
             <tr>
-              <td colspan="6" style="text-align: center; padding: 3rem; color: #999;">
+              <td colspan="24" style="text-align: center; padding: 3rem; color: #999;">
                 No policy records found in the system.
               </td>
             </tr>
@@ -152,45 +103,7 @@ import { ApiService } from '../../../core/services/api';
         </p-table>
       </div>
     </div>
-  `,
-  styles: [`
-    /* CUSTOM CSS FOR THE VERTICAL TABLE */
-    .vertical-table {
-      width: 100%;
-      border-collapse: collapse;
-      background: white;
-      border: 1px solid #e0e0e0;
-      border-radius: 4px;
-      overflow: hidden;
-    }
-    .vertical-table th.table-title {
-      background: #e9ecef;
-      color: #333;
-      text-align: center;
-      font-size: 1.1rem;
-      padding: 0.75rem;
-      border-bottom: 2px solid #ccc;
-    }
-    .vertical-table th, .vertical-table td {
-      padding: 0.75rem 1rem;
-      border-bottom: 1px solid #e0e0e0;
-      text-align: left;
-    }
-    .vertical-table th {
-      background: #f8f9fa;
-      color: #555;
-      font-weight: 600;
-      width: 40%;
-      border-right: 1px solid #e0e0e0;
-    }
-    .vertical-table td {
-      color: #222;
-      width: 60%;
-    }
-    .vertical-table tr:last-child th, .vertical-table tr:last-child td {
-      border-bottom: none;
-    }
-  `]
+  `
 })
 export class ReadOnlyDashboardComponent implements OnInit {
   allPolicies: any[] = [];
@@ -205,25 +118,28 @@ export class ReadOnlyDashboardComponent implements OnInit {
       next: (data) => {
         console.log('Audit Data:', data);
         this.allPolicies = data;
-        this.cdr.detectChanges(); // Prevents NG0100 Error
+        this.cdr.detectChanges(); 
       },
       error: (err) => console.error('Failed to load audit data', err)
     });
   }
 
-  // Parses the stringified JSON payload from backend
-  getNominees(nomineesStr: string): any[] {
-    if (!nomineesStr) return [];
+  // Helper method to convert the messy JSON array into a clean comma-separated string for the data grid cell
+  formatNominees(nomineesStr: string): string {
+    if (!nomineesStr) return 'None';
     try {
       let parsed = JSON.parse(nomineesStr);
-      // Handles potential double array nesting "[[...]]"
+      // Flatten if backend sends double array like "[[\"name\"...]]"
       if (Array.isArray(parsed) && Array.isArray(parsed[0])) {
         parsed = parsed[0];
       }
-      return Array.isArray(parsed) ? parsed : [parsed];
+      
+      const nomineesArr = Array.isArray(parsed) ? parsed : [parsed];
+      
+      // Map it into "Emily Johnson (50%), Bob Johnson (50%)"
+      return nomineesArr.map(n => `${n.name} (${n.percentageStake}%)`).join(', ');
     } catch (e) {
-      console.error('Error parsing nominees:', e);
-      return [];
+      return 'Invalid Data';
     }
   }
 
