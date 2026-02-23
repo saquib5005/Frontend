@@ -153,3 +153,110 @@ export class ReadOnlyDashboardComponent implements OnInit {
     }
   }
 }
+
+---------
+
+import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { Button } from 'primeng/button';
+import { InputText } from 'primeng/inputtext';
+import { PasswordModule } from 'primeng/password';
+import { ApiService } from '../../../core/services/api';
+import { AuthService } from '../auth.service';
+
+@Component({
+  selector: 'app-login',
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule, Button, InputText, PasswordModule],
+  template: `
+    <div style="display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f4f6f8;">
+      <div style="background: white; padding: 3rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 400px;">
+        
+        <div style="text-align: center; margin-bottom: 2rem;">
+          <i class="pi pi-shield" style="font-size: 3rem; color: #00915a; margin-bottom: 1rem;"></i>
+          <h2 style="margin: 0; color: #333;">Welcome Back</h2>
+          <p style="color: #666; margin-top: 0.5rem;">Sign in to your account</p>
+        </div>
+
+        <form [formGroup]="loginForm" (ngSubmit)="onLogin()" class="p-fluid">
+          
+          <div class="field" style="margin-bottom: 1.5rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Username</label>
+            <input pInputText formControlName="username" placeholder="Enter your username" />
+            <small *ngIf="loginForm.get('username')?.invalid && loginForm.get('username')?.touched" style="color: red;">
+              Username is required.
+            </small>
+          </div>
+
+          <div class="field" style="margin-bottom: 2rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Password</label>
+            <p-password formControlName="password" [feedback]="false" [toggleMask]="true" placeholder="Enter your password" styleClass="w-full"></p-password>
+            <small *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched" style="color: red;">
+              Password is required.
+            </small>
+          </div>
+
+          <p-button label="Sign In" type="submit" styleClass="p-button-success w-full" [disabled]="loginForm.invalid"></p-button>
+
+        </form>
+      </div>
+    </div>
+  `
+})
+export class LoginComponent {
+  loginForm: FormGroup;
+
+  constructor(
+    private fb: FormBuilder,
+    private apiService: ApiService,
+    private authService: AuthService,
+    private router: Router
+  ) {
+    // REMOVED 'role' from the form group
+    this.loginForm = this.fb.group({
+      username: ['', Validators.required],
+      password: ['', Validators.required]
+    });
+  }
+
+  onLogin() {
+    if (this.loginForm.valid) {
+      const credentials = this.loginForm.value;
+
+      this.apiService.login(credentials).subscribe({
+        next: (response: any) => {
+          console.log('Login Success:', response);
+          
+          // 1. Save user details (and token if applicable) to localStorage/session
+          this.authService.saveUser(response);
+
+          // 2. Extract the role provided by the backend database
+          const role = response.role?.toUpperCase();
+
+          // 3. Smart Routing based on backend role
+          if (role === 'SUPERUSER') {
+            this.router.navigate(['/dashboard/super-policies']);
+          } 
+          else if (role === 'APPROVER') {
+            this.router.navigate(['/dashboard/approver-policies']);
+          } 
+          else if (role === 'READ-ONLY' || role === 'READ_ONLY') {
+            this.router.navigate(['/dashboard/read-only']);
+          } 
+          else {
+            // Default to standard User view
+            this.router.navigate(['/dashboard/user-policies']);
+          }
+        },
+        error: (err) => {
+          console.error('Login Failed:', err);
+          alert('Invalid username or password. Please try again.');
+        }
+      });
+    } else {
+      this.loginForm.markAllAsTouched();
+    }
+  }
+}
