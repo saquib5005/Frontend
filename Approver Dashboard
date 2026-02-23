@@ -565,6 +565,189 @@ export class ApproverPoliciesComponent implements OnInit {
   }
 }
 
+============================
+
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { TableModule } from 'primeng/table';
+import { Tag } from 'primeng/tag';
+import { Button } from 'primeng/button';
+import { ApiService } from '../../../core/services/api';
+
+@Component({
+  selector: 'app-approver-policies',
+  standalone: true,
+  imports: [CommonModule, TableModule, Tag, Button],
+  template: `
+    <div style="background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+      <h2 style="margin-top: 0; color: #00915a;">User Policies (All Details)</h2>
+      <p style="color: #666; margin-bottom: 2rem;">Full database records of user applications.</p>
+
+      <p-table [value]="policies" dataKey="id" styleClass="p-datatable-striped" [tableStyle]="{'min-width': '70rem'}">
+        
+        <ng-template pTemplate="header">
+          <tr>
+            <th style="width: 5rem"></th> <th>Policy ID</th>
+            <th>Plan Name</th>
+            <th>Holder Name</th>
+            <th>Premium (INR)</th>
+            <th>Maturity Date</th>
+            <th>Maturity Amt (INR)</th>
+          </tr>
+        </ng-template>
+        
+        <ng-template pTemplate="body" let-policy let-expanded="expanded">
+          <tr>
+            <td>
+              <p-button type="button" pRipple [pRowToggler]="policy" [text]="true" [rounded]="true" [plain]="true" [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'" />
+            </td>
+            
+            <td style="font-weight: bold; color: #555;">#{{ policy.id }}</td>
+            
+            <td style="font-weight: 600;">
+              {{ policy.planName || ('Plan #' + policy.planId) }}
+            </td>
+            
+            <td>{{ policy.holderName }}</td>
+            
+            <td style="color: #d32f2f; font-weight: 500;">
+              {{ policy.premiumAmount | currency:'INR' }} 
+              <span style="font-size: 0.8em; color: #777;">/ {{ policy.premiumFrequency }}</span>
+            </td>
+            
+            <td>{{ policy.maturityDate | date:'mediumDate' }}</td>
+            
+            <td style="color: #00915a; font-weight: bold;">
+              {{ policy.maturityAmount | currency:'INR' }}
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="rowexpansion" let-policy>
+          <tr>
+            <td colspan="7">
+              <div style="padding: 1.5rem; background: #f8f9fa; border-radius: 8px; margin: 0.5rem 0; border: 1px solid #e0e0e0;">
+                
+                <h4 style="margin-top: 0; color: #00915a; border-bottom: 2px solid #e0e0e0; padding-bottom: 0.5rem; margin-bottom: 1.5rem;">
+                  Full Policy Record #{{ policy.id }}
+                </h4>
+                
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; margin-bottom: 2rem;">
+                  
+                  <div>
+                    <h5 style="color: #555; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.5px; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Personal Details</h5>
+                    <div class="data-row"><strong>Holder Name:</strong> {{ policy.holderName }}</div>
+                    <div class="data-row"><strong>DOB:</strong> {{ policy.holderDob | date:'mediumDate' }}</div>
+                    <div class="data-row"><strong>Address:</strong> {{ policy.holderAddress }}</div>
+                    <div class="data-row"><strong>Registered Email:</strong> {{ policy.user?.email }}</div>
+                  </div>
+
+                  <div>
+                    <h5 style="color: #555; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.5px; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Income & Financial</h5>
+                    <div class="data-row"><strong>Income Source:</strong> {{ policy.incomeSource }}</div>
+                    <div class="data-row"><strong>Total Income:</strong> {{ policy.totalIncome | currency:'INR' }}</div>
+                    <div class="data-row"><strong>Insured Amount:</strong> {{ policy.insuredAmount | currency:'INR' }}</div>
+                    <div class="data-row"><strong>Coverage Limit:</strong> {{ policy.coverageLimit ? (policy.coverageLimit | currency:'INR') : 'N/A' }}</div>
+                  </div>
+
+                  <div>
+                    <h5 style="color: #555; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.5px; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Policy Specifications</h5>
+                    <div class="data-row"><strong>Plan ID:</strong> {{ policy.planId }}</div>
+                    <div class="data-row"><strong>Tenure:</strong> {{ policy.tenureYears }} Years</div>
+                    <div class="data-row"><strong>Issuance Date:</strong> {{ policy.issuanceDate | date:'mediumDate' }}</div>
+                    <div class="data-row"><strong>Maturity Date:</strong> {{ policy.maturityDate | date:'mediumDate' }}</div>
+                  </div>
+                </div>
+
+                <h5 style="color: #555; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.5px; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 1rem;">Nominees</h5>
+                <p-table [value]="getNominees(policy.nomineesJson)" styleClass="p-datatable-sm p-datatable-gridlines" [tableStyle]="{'width': '100%'}">
+                  <ng-template pTemplate="header">
+                    <tr>
+                      <th style="background: #eee;">Name</th>
+                      <th style="background: #eee;">Relationship</th>
+                      <th style="background: #eee;">DOB</th>
+                      <th style="background: #eee;">Contact</th>
+                      <th style="background: #eee;">Stake (%)</th>
+                    </tr>
+                  </ng-template>
+                  <ng-template pTemplate="body" let-nominee>
+                    <tr>
+                      <td>{{ nominee.name }}</td>
+                      <td>{{ nominee.relationship }}</td>
+                      <td>{{ nominee.dob | date:'mediumDate' }}</td>
+                      <td>{{ nominee.contactNumber }}</td>
+                      <td style="font-weight: bold; color: #00915a;">{{ nominee.percentageStake }}%</td>
+                    </tr>
+                  </ng-template>
+                  <ng-template pTemplate="emptymessage">
+                    <tr>
+                      <td colspan="5" style="text-align: center; color: #999;">No nominee data found.</td>
+                    </tr>
+                  </ng-template>
+                </p-table>
+
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 3rem;">No user policies found in the system.</td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  `,
+  styles: [`
+    .data-row {
+      margin-bottom: 0.5rem;
+      font-size: 0.95rem;
+      color: #333;
+    }
+    .data-row strong {
+      color: #555;
+      display: inline-block;
+      width: 110px;
+    }
+  `]
+})
+export class ApproverPoliciesComponent implements OnInit {
+  policies: any[] = [];
+
+  constructor(
+    private apiService: ApiService, 
+    private cdr: ChangeDetectorRef // Fixes the NG0100 error
+  ) {}
+
+  ngOnInit() {
+    this.apiService.getAllUserPolicies().subscribe({
+      next: (data) => {
+        console.log('Approver Data Fetched:', data);
+        this.policies = data;
+        this.cdr.detectChanges(); // Force update to prevent error
+      },
+      error: (err) => console.error('Failed to load policies:', err)
+    });
+  }
+
+  // Parses the stringified JSON from your backend
+  getNominees(nomineesStr: string): any[] {
+    if (!nomineesStr) return [];
+    try {
+      let parsed = JSON.parse(nomineesStr);
+      // Flattens double array if present (e.g. [[{...}]])
+      if (Array.isArray(parsed) && Array.isArray(parsed[0])) {
+        parsed = parsed[0];
+      }
+      return Array.isArray(parsed) ? parsed : [parsed];
+    } catch (e) {
+      console.error('Error parsing nomineesJson:', e);
+      return [];
+    }
+  }
+}
+
 
 
 
