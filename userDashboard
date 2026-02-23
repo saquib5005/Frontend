@@ -13,11 +13,14 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, FormArray, Validators } from '@angular/forms';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { DropdownModule } from 'primeng/dropdown';
-import { CalendarModule } from 'primeng/calendar';
-import { InputNumberModule } from 'primeng/inputnumber';
+import { Button } from 'primeng/button';
+import { InputText } from 'primeng/inputtext';
+import { InputNumber } from 'primeng/inputnumber';
+
+// NEW: Updated PrimeNG V18+ Imports
+import { Select } from 'primeng/select'; 
+import { DatePicker } from 'primeng/datepicker'; 
+
 import { ApiService } from '../../../core/services/api';
 import { AuthService } from '../../auth/auth.service';
 
@@ -25,8 +28,9 @@ import { AuthService } from '../../auth/auth.service';
   selector: 'app-issue-policy',
   standalone: true,
   imports: [
-    CommonModule, ReactiveFormsModule, ButtonModule, 
-    InputTextModule, DropdownModule, CalendarModule, InputNumberModule
+    CommonModule, ReactiveFormsModule, Button, 
+    InputText, InputNumber, 
+    Select, DatePicker // <-- Updated Imports registered here
   ],
   template: `
     <div style="background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); max-width: 800px; margin: 0 auto;">
@@ -49,8 +53,8 @@ import { AuthService } from '../../auth/auth.service';
               <input pInputText formControlName="holderName" placeholder="Full Name" />
             </div>
             <div class="field" style="margin-bottom: 1.5rem;">
-              <label>Date of Birth</label>
-              <p-calendar formControlName="holderDob" [showIcon]="true" placeholder="Select DOB"></p-calendar>
+              <label style="display: block; margin-bottom: 0.5rem;">Date of Birth</label>
+              <p-datepicker formControlName="holderDob" [showIcon]="true" placeholder="Select DOB" styleClass="w-full"></p-datepicker>
             </div>
             <div class="field" style="margin-bottom: 1.5rem;">
               <label>Address</label>
@@ -65,7 +69,7 @@ import { AuthService } from '../../auth/auth.service';
             </div>
             <div class="field" style="margin-bottom: 1.5rem;">
               <label>Total Annual Income ($)</label>
-              <p-inputNumber formControlName="totalIncome" mode="currency" currency="USD"></p-inputNumber>
+              <p-inputNumber formControlName="totalIncome" mode="currency" currency="USD" styleClass="w-full"></p-inputNumber>
             </div>
           </div>
 
@@ -87,8 +91,8 @@ import { AuthService } from '../../auth/auth.service';
                     <input pInputText formControlName="contactNumber" />
                   </div>
                   <div>
-                    <label>Date of Birth</label>
-                    <p-calendar formControlName="dob" [showIcon]="true" appendTo="body"></p-calendar>
+                    <label style="display: block; margin-bottom: 0.5rem;">Date of Birth</label>
+                    <p-datepicker formControlName="dob" [showIcon]="true" appendTo="body" styleClass="w-full"></p-datepicker>
                   </div>
                   <div>
                     <label>Relationship</label>
@@ -96,7 +100,7 @@ import { AuthService } from '../../auth/auth.service';
                   </div>
                   <div style="grid-column: span 2;">
                     <label>Percentage Stake (%)</label>
-                    <p-inputNumber formControlName="percentageStake" suffix="%" [min]="1" [max]="100"></p-inputNumber>
+                    <p-inputNumber formControlName="percentageStake" suffix="%" [min]="1" [max]="100" styleClass="w-full"></p-inputNumber>
                   </div>
                 </div>
               </div>
@@ -106,8 +110,8 @@ import { AuthService } from '../../auth/auth.service';
 
           <div *ngIf="currentStep === 4" formGroupName="policy">
             <div class="field" style="margin-bottom: 1.5rem;">
-              <label>Select Plan</label>
-              <p-dropdown formControlName="selectedPlan" [options]="availablePlans" optionLabel="planName" placeholder="Choose a Plan" (onChange)="onPlanSelect($event)"></p-dropdown>
+              <label style="display: block; margin-bottom: 0.5rem;">Select Plan</label>
+              <p-select formControlName="selectedPlan" [options]="availablePlans" optionLabel="planName" placeholder="Choose a Plan" (onChange)="onPlanSelect($event)" styleClass="w-full"></p-select>
             </div>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
@@ -121,25 +125,25 @@ import { AuthService } from '../../auth/auth.service';
               </div>
               <div>
                 <label>Coverage Limit ($)</label>
-                <p-inputNumber formControlName="coverageLimit" [readonly]="true" inputId="minmaxfraction" mode="decimal" [minFractionDigits]="2" styleClass="w-full opacity-70"></p-inputNumber>
+                <p-inputNumber formControlName="coverageLimit" [readonly]="true" mode="decimal" [minFractionDigits]="2" styleClass="w-full opacity-70"></p-inputNumber>
               </div>
               <div>
                 <label>Tenure (Years)</label>
-                <p-inputNumber formControlName="tenureYears" [min]="1" [max]="100"></p-inputNumber>
+                <p-inputNumber formControlName="tenureYears" [min]="1" [max]="100" styleClass="w-full"></p-inputNumber>
               </div>
               <div>
-                <label>Premium Frequency</label>
-                <p-dropdown formControlName="premiumFrequency" [options]="frequencies"></p-dropdown>
+                <label style="display: block; margin-bottom: 0.5rem;">Premium Frequency</label>
+                <p-select formControlName="premiumFrequency" [options]="frequencies" styleClass="w-full"></p-select>
               </div>
               <div>
                 <label>Insured Amount ($)</label>
-                <p-inputNumber formControlName="insuredAmount" mode="currency" currency="USD"></p-inputNumber>
+                <p-inputNumber formControlName="insuredAmount" mode="currency" currency="USD" styleClass="w-full"></p-inputNumber>
               </div>
             </div>
 
             <div class="field" style="margin-bottom: 1.5rem;">
-              <label>Issuance Date</label>
-              <p-calendar formControlName="issuanceDate" [showIcon]="true"></p-calendar>
+              <label style="display: block; margin-bottom: 0.5rem;">Issuance Date</label>
+              <p-datepicker formControlName="issuanceDate" [showIcon]="true" styleClass="w-full"></p-datepicker>
             </div>
           </div>
 
@@ -219,7 +223,6 @@ export class IssuePolicyComponent implements OnInit {
     });
   }
 
-  // --- Form Array Getters & Setters ---
   get nominees() {
     return this.issueForm.get('nominees') as FormArray;
   }
@@ -244,7 +247,6 @@ export class IssuePolicyComponent implements OnInit {
     }
   }
 
-  // --- Auto-fill logic when a plan is selected ---
   onPlanSelect(event: any) {
     const plan = event.value;
     const pGroup = this.issueForm.get('policy');
@@ -256,9 +258,7 @@ export class IssuePolicyComponent implements OnInit {
     }
   }
 
-  // --- Wizard Navigation ---
   nextStep() {
-    // Validate current step before proceeding
     let currentGroup: any;
     if (this.currentStep === 1) currentGroup = this.issueForm.get('personal');
     if (this.currentStep === 2) currentGroup = this.issueForm.get('income');
@@ -270,7 +270,6 @@ export class IssuePolicyComponent implements OnInit {
       return;
     }
     
-    // Validate total stakeholder percentage = 100%
     if (this.currentStep === 3) {
       const totalStake = this.nominees.value.reduce((sum: number, n: any) => sum + (n.percentageStake || 0), 0);
       if (totalStake !== 100) {
@@ -286,7 +285,6 @@ export class IssuePolicyComponent implements OnInit {
     this.currentStep--;
   }
 
-  // --- Final Calculation and Submit ---
   calculateAndSubmit() {
     const pGroup = this.issueForm.get('policy');
     if (pGroup?.invalid) {
@@ -295,12 +293,10 @@ export class IssuePolicyComponent implements OnInit {
       return;
     }
 
-    // Extract Data
     const rawData = this.issueForm.getRawValue();
     const policyData = rawData.policy;
     const personalData = rawData.personal;
 
-    // Calculations
     const freq = policyData.premiumFrequency;
     let finalPremium = this.selectedPlanBasePremium;
     if (freq === 'Quarterly') finalPremium = this.selectedPlanBasePremium * 3;
@@ -310,10 +306,8 @@ export class IssuePolicyComponent implements OnInit {
     const maturityDate = new Date(issueDate);
     maturityDate.setFullYear(maturityDate.getFullYear() + policyData.tenureYears);
 
-    // Basic Maturity Logic: Insured Amount + (5% interest * years)
     const maturityAmount = policyData.insuredAmount + (policyData.insuredAmount * 0.05 * policyData.tenureYears);
 
-    // Prepare API Payload
     const apiPayload = {
       ...rawData,
       calculatedPremium: finalPremium,
@@ -325,7 +319,6 @@ export class IssuePolicyComponent implements OnInit {
     
     this.apiService.issuePolicy(apiPayload, userId).subscribe({
       next: () => {
-        // Build Summary Data for UI
         this.summaryData = {
           holderName: personalData.holderName,
           planName: policyData.selectedPlan.planName,
@@ -349,13 +342,11 @@ export class IssuePolicyComponent implements OnInit {
     this.issueForm.reset();
     this.currentStep = 1;
     this.showSummary = false;
-    // Reset nominee array to 1 element
     while (this.nominees.length > 1) {
       this.nominees.removeAt(1);
     }
   }
 }
-
 --------------
 
 children: [
